@@ -1,7 +1,7 @@
 import sys
 
 from PyQt5 import QtCore
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QMetaObject
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QVBoxLayout, QWidget,
@@ -10,12 +10,14 @@ from PyQt5.QtWidgets import (
 # 在创建 QApplication 之前设置属性
 QtCore.QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
 
+from PyQt5.QtCore import QMetaObject, Qt, Q_ARG
+
 class OutputRedirector:
     def __init__(self, text_edit):
         self.text_edit = text_edit
 
     def write(self, text):
-        self.text_edit.append(text)
+        QMetaObject.invokeMethod(self.text_edit, "append", Qt.QueuedConnection, Q_ARG(str, text))
 
     def flush(self):
         pass

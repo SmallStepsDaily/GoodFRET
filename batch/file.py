@@ -14,8 +14,7 @@ def list_immediate_subdirectories(path):
         return [name for name in os.listdir(path)
                 if os.path.isdir(os.path.join(path, name))]
     except FileNotFoundError:
-        print(f"指定的路径 {path} 不存在。")
-        return []
+        raise FileNotFoundError(f"指定的路径 {path} 不存在。")
 
 
 def list_numeric_subdirectories(path):
