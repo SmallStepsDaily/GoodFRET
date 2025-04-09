@@ -3,7 +3,7 @@ from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLineEdit, QPushButton, QFileDialog, \
     QTextEdit, QRadioButton, QLabel, QButtonGroup
 import threading
-from PyQt5.QtCore import QMetaObject, Qt
+from PyQt5.QtCore import pyqtSignal, QObject
 
 from batch.processing import BatchProcessing
 from ui.main_ui import OutputRedirector
@@ -13,6 +13,7 @@ class SegmentationUI(QWidget):
     def __init__(self):
         super().__init__()
         self.running = False
+        self.stop_event = threading.Event()  # 添加 stop_event
         self.initUI()
 
     def initUI(self):
@@ -161,22 +162,22 @@ class SegmentationUI(QWidget):
         self.running = True
         self.run_button.setEnabled(False)
         self.stop_button.setEnabled(True)
+        self.stop_event.clear()  # 清除停止事件
         input_folder = self.input_folder_input.text().strip()
-        print("输入文件路径为: ", input_folder)
         self.output_text.clear()
-        self.output_text.append("开始运行==========================================>图像单细胞分割程序")
-
         # 重定向标准输出
         original_stdout = sys.stdout
         output_redirector = OutputRedirector(self.output_text)
         sys.stdout = output_redirector
 
+        self.output_text.append("输入文件路径为: " + str(input_folder))
+        self.output_text.append("开始运行==========================================>图像单细胞分割程序")
+
         try:
             # 为运行操作创建一个新线程
             threading.Thread(target=self._run_segmentation, args=(input_folder, output_redirector)).start()
         except Exception as e:
-            self.output_text.append("运行出错==============================================>")
-            self.output_text.append(str(e))
+            self.output_text.append("运行出错==============================================>" + str(e))
             self.running = False
             self.run_button.setEnabled(True)
             self.stop_button.setEnabled(False)
@@ -185,7 +186,6 @@ class SegmentationUI(QWidget):
             sys.stdout = original_stdout
 
     def _run_segmentation(self, input_folder, output_redirector):
-        # 重定向标准输出
         original_stdout = sys.stdout
         sys.stdout = output_redirector
         try:
@@ -205,37 +205,42 @@ class SegmentationUI(QWidget):
                 print("执行细胞核 - 线粒体的分割操作")
                 # 执行细胞核 - 线粒体的分割操作
                 from segmentation.nuclei_mit_seg import MitNucleiSegmentation
+
                 model = MitNucleiSegmentation(
                     seg_diameter=int(self.cell_diameter_input.text()),
                     seg_min_diameter=int(self.cell_min_diameter_input.text()),
                     seg_max_diameter=int(self.cell_max_diameter_input.text()),
                     seg_nuclei_diameter=int(self.nuclei_diameter_input.text()),
                     seg_nuclei_min_diameter=int(self.nuclei_min_diameter_input.text()),
-                    seg_nuclei_max_diameter=int(self.nuclei_max_diameter_input.text())
+                    seg_nuclei_max_diameter=int(self.nuclei_max_diameter_input.text()),
+                    output_redirector=output_redirector
                 )
 
                 def start_model(image_set_path, seg_model):
+                    if self.stop_event.is_set():
+                        return
                     seg_model.start(image_set_path)
 
-                batch = BatchProcessing(input_folder)
-                batch.start(start_model, model)
+                batch = BatchProcessing(input_folder, stop_event=self.stop_event)
+                batch.start(start_model, model)  # 传递 stop_event
+
             elif checked_button == self.nucleus_cytoplasm_radio:
                 # 执行细胞核 - 细胞质的分割操作
                 print("执行细胞核 - 细胞质的分割操作")
+            print("完成分割操作！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！")
         except Exception as e:
-            self.output_text.append("运行出错==============================================>")
-            self.output_text.append(str(e))
+            print("运行出错==============================================>" + str(e))
         finally:
             self.running = False
             self.run_button.setEnabled(True)
             self.stop_button.setEnabled(False)
-            # 恢复标准输出
             sys.stdout = original_stdout
 
     def stop(self):
         self.running = False
         self.run_button.setEnabled(True)
         self.stop_button.setEnabled(False)
+        self.stop_event.set()  # 设置停止事件
         self.output_text.append("运行已终止==============================================>")
 
 

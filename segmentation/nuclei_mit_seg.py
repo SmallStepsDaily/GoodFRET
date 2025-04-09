@@ -21,8 +21,9 @@ class MitNucleiSegmentation(Segmentation):
                  seg_max_diameter=600,
                  seg_nuclei_diameter=120,
                  seg_nuclei_min_diameter=80,
-                 seg_nuclei_max_diameter=200):
-        super().__init__()
+                 seg_nuclei_max_diameter=200,
+                 output_redirector=None):
+        super().__init__(output_redirector)
         self.channel = [1, 2]
         self.seg_diameter = seg_diameter
         self.seg_min_diameter = seg_min_diameter
@@ -41,9 +42,9 @@ class MitNucleiSegmentation(Segmentation):
         mit_image_np = self.pretreatment(mit_image_np)
         nuclei_image_np = self.pretreatment(nuclei_image_np)
         current_image_np = np.stack([mit_image_np, nuclei_image_np], axis=-1)
-        print("分割线粒体和细胞核组合的细胞操作 ===================> ", path)
+        print("分割线粒体和细胞核组合的细胞操作 ===================> " + str(path))
         mit_mask_np, nuclei_mask_np = self.segmentation(current_image_np)
-        print("保存线粒体和细胞核组合的细胞mask ===================> ", path)
+        print("保存线粒体和细胞核组合的细胞mask ===================> " + str(path))
         self.save(mit_mask_np, path, 'mmask.jpg')
         self.save(nuclei_mask_np, path, 'nmask.jpg')
 

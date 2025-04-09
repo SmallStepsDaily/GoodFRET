@@ -1,23 +1,27 @@
 import sys
 
 from PyQt5 import QtCore
-from PyQt5.QtCore import Qt, QMetaObject
-from PyQt5.QtGui import QIcon
+from PyQt5.QtCore import QMetaObject, Qt, Q_ARG
+from PyQt5.QtGui import QIcon, QTextCursor
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QVBoxLayout, QWidget,
-    QTabWidget, QStatusBar, QPushButton, QHBoxLayout
+    QTabWidget
 )
 # 在创建 QApplication 之前设置属性
 QtCore.QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
 
-from PyQt5.QtCore import QMetaObject, Qt, Q_ARG
 
 class OutputRedirector:
     def __init__(self, text_edit):
         self.text_edit = text_edit
 
     def write(self, text):
-        QMetaObject.invokeMethod(self.text_edit, "append", Qt.QueuedConnection, Q_ARG(str, text))
+        # 将光标移动到文本末尾
+        cursor = self.text_edit.textCursor()
+        cursor.movePosition(QTextCursor.End)
+        self.text_edit.setTextCursor(cursor)
+        # 插入文本，不换行
+        QMetaObject.invokeMethod(self.text_edit, "insertPlainText", Qt.QueuedConnection, Q_ARG(str, text))
 
     def flush(self):
         pass
@@ -41,7 +45,7 @@ class ImageProcessingUI(QMainWindow):
         self.setCentralWidget(central_widget)
 
         # 创建中部操作区的标签页
-        actions = ['数据说明', '名称修改', '图像分割', 'FRET特征提取', '亚细胞器特征提取', '特征分析', '药效分析', '帮助']
+        actions = ['数据说明', '名称修改', '图像分割', 'FRET特征', '亚细胞特征', '特征分析', '药效分析', '帮助']
         self.tab_widget = QTabWidget()
         for i in range(len(actions)):
             tab = QWidget()
@@ -65,6 +69,12 @@ class ImageProcessingUI(QMainWindow):
                 layout = QVBoxLayout()
                 description_ui = MarkdownReaderUI()
                 layout.addWidget(description_ui)
+                tab.setLayout(layout)
+            elif actions[i] == 'FRET特征':
+                from ui.fret_extraction_ui import FRETExtractionUI
+                layout = QVBoxLayout()
+                fret_extraction_ui = FRETExtractionUI()
+                layout.addWidget(fret_extraction_ui)
                 tab.setLayout(layout)
             # 其他标签页类似处理
             self.tab_widget.addTab(tab, actions[i])

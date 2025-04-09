@@ -1,4 +1,6 @@
 import os
+import sys
+
 import cv2
 import numpy as np
 import tifffile
@@ -6,11 +8,17 @@ from skimage import measure
 
 
 class Segmentation:
-    def __init__(self):
+    def __init__(self, output_redirector):
         self.seg_model = None
         self.seg_diameter = None
         self.seg_min_diameter = None
         self.seg_max_diameter = None
+        # 命令行输出到文本框内
+        self.original_stdout = sys.stdout
+        sys.stdout = output_redirector
+
+    def __del__(self):
+        sys.stdout = self.original_stdout
 
     def start(self, path):
         """
