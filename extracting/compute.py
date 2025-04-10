@@ -5,18 +5,35 @@ import pandas as pd
 import torch
 from PIL import Image
 from tifffile import tifffile
+
+from batch.processing import BatchProcessing
+
 """
 FRET 效率计算函数
 注意数据加载顺序是 AA、DD、DA
 """
-def load_image_to_tensor(image_path):
+def load_image_to_tensor(image_path, dtype=torch.float):
     """
     加载图像到 GPU 上
     期望输入图像为 二维图像
     """
     img = Image.open(image_path)
-    return torch.from_numpy(np.array(img)).float()
+    return torch.from_numpy(np.array(img)).type(dtype=dtype)
 
+
+def load_image_to_numpy(image_path, dtype=np.float32):
+    """
+    加载图像到 numpy 数组
+    期望输入图像为 二维图像
+
+    :param image_path: 图像文件的路径
+    :param dtype: 转换后 numpy 数组的数据类型，默认为 np.float32
+    :return: 加载并转换后的 numpy 数组
+    """
+    # 打开图像文件
+    img = Image.open(image_path)
+    # 将图像转换为 numpy 数组，并指定数据类型
+    return np.array(img, dtype=dtype)
 
 class FRETComputer:
     """
@@ -117,18 +134,19 @@ class FRETComputer:
         # 记录数据
         self.image_Ed = image_Ed
         self.image_Rc = image_Rc
-        self.fret_mask = fmask
+        self.fret_mask = fmask.type(dtype=torch.uint8)
 
         # TODO 保存Ed效率图 保存为 TIFF 文件（可以选择其他格式，如 PNG），并设置保存参数以保留浮点数精度
-        # tifffile.imwrite(os.path.join(self.current_sub_path, 'Ed.tif'), image_Ed.numpy())
-        # tifffile.imwrite(os.path.join(self.current_sub_path, 'Rc.tif'), image_Rc.numpy())
-        # Image.fromarray(fmask.cpu().numpy().astype(np.uint8)).save(os.path.join(self.current_sub_path, 'fmask.jpg'))
+        tifffile.imwrite(os.path.join(self.current_sub_path, 'Ed.tif'), image_Ed.numpy())
+        tifffile.imwrite(os.path.join(self.current_sub_path, 'Rc.tif'), image_Rc.numpy())
+        Image.fromarray(fmask.cpu().numpy().astype(np.uint8)).save(os.path.join(self.current_sub_path, 'fmask.jpg'))
 
         # TODO 开始提取效率特征
         start_extraction = importlib.import_module(f'extracting.{self.fret_target_name}')
-        start_extraction.start(self)
+        result = start_extraction.start(self)
 
         print("FRET计算完成 ============================================> ", sub_path)
+        return result
 
     @staticmethod
     def filter_cell_region(image_ED, mask):
@@ -222,6 +240,15 @@ class FRETComputer:
 
 
 if __name__ == "__main__":
-    # EGFR 参数Ed提取参数
-    fret = FRETComputer('egfr_grb2', expose_times=(300, 1000, 500))
-    fret.start(r'D:\data\test\H1975-Dac-2h-d1-c7μm\4')
+    # EGFR 参数Ed提取参数 验证批处理流程
+    def EGFR_A549_process(image_set_path, fret_model):
+        #############################
+        # EGFR-FRET分析流程
+        #############################
+        # 进行分割流程
+        return fret_model.start(image_set_path)
+
+    fret = FRETComputer('egfr_grb2', expose_times=(200, 1000, 500))
+    batch = BatchProcessing(r'D:\data\test')
+    batch.start(EGFR_A549_process, fret)
+

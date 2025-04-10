@@ -136,15 +136,16 @@ class FRETExtractionUI(QWidget):
         feature_selection_label.setStyleSheet("font-size: 24px;")
         middle_layout.addWidget(feature_selection_label, 0, 6, 1, 2)
 
-        self.extract_whole_image = QRadioButton("提取整图像特征")
         self.extract_single_cell = QRadioButton("提取单细胞特征")
+        self.extract_whole_image = QRadioButton("提取整图像特征")
         self.feature_button_group = QButtonGroup()
-        self.feature_button_group.addButton(self.extract_whole_image)
         self.feature_button_group.addButton(self.extract_single_cell)
-        self.extract_whole_image.setChecked(True)
+        self.feature_button_group.addButton(self.extract_whole_image)
 
-        middle_layout.addWidget(self.extract_whole_image, 1, 6)
-        middle_layout.addWidget(self.extract_single_cell, 2, 6)
+        self.extract_single_cell.setChecked(True)
+
+        middle_layout.addWidget(self.extract_single_cell, 1, 6)
+        middle_layout.addWidget(self.extract_whole_image, 2, 6)
 
         # 运行日志标签和命令输出文本框的水平布局
         log_layout = QHBoxLayout()
@@ -180,8 +181,6 @@ class FRETExtractionUI(QWidget):
         main_layout.setStretchFactor(button_layout, 1)
 
         self.setLayout(main_layout)
-        self.setWindowTitle('参数输入与输出界面')
-        self.show()
 
     def select_folder(self):
         folder = QFileDialog.getExistingDirectory(self, "选择文件夹")

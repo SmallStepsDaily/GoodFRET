@@ -45,7 +45,7 @@ class ImageProcessingUI(QMainWindow):
         self.setCentralWidget(central_widget)
 
         # 创建中部操作区的标签页
-        actions = ['数据说明', '名称修改', '图像分割', 'FRET特征', '亚细胞特征', '特征分析', '药效分析', '帮助']
+        actions = ['数据说明', '名称修改', '图像分割', 'FRET特征', '表型特征', 'FRET分析', '表型分析', '药效分析', '帮助']
         self.tab_widget = QTabWidget()
         for i in range(len(actions)):
             tab = QWidget()
@@ -75,6 +75,20 @@ class ImageProcessingUI(QMainWindow):
                 layout = QVBoxLayout()
                 fret_extraction_ui = FRETExtractionUI()
                 layout.addWidget(fret_extraction_ui)
+                tab.setLayout(layout)
+            elif actions[i] == '表型特征':
+                pass
+            elif actions[i] == 'FRET分析':
+                from ui.fret_analysis_ui import FRETAnalysisUI
+                layout = QVBoxLayout()
+                fret_analysis_ui = FRETAnalysisUI()
+                layout.addWidget(fret_analysis_ui)
+                tab.setLayout(layout)
+            elif actions[i] == '表型分析':
+                from ui.phenotype_analysis_ui import PhenotypeAnalysisUI
+                layout = QVBoxLayout()
+                phenotype_analysis_ui = PhenotypeAnalysisUI()
+                layout.addWidget(phenotype_analysis_ui)
                 tab.setLayout(layout)
             # 其他标签页类似处理
             self.tab_widget.addTab(tab, actions[i])

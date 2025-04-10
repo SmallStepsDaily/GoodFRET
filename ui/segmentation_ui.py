@@ -44,6 +44,7 @@ class SegmentationUI(QWidget):
         self.mitochondria_radio = QRadioButton("线粒体")
         self.nucleus_radio = QRadioButton("细胞核")
         self.cytoplasm_radio = QRadioButton("细胞质")
+        self.nucleus_foxo3a_radio = QRadioButton("细胞核 - foxo3a")
         self.nucleus_mitochondria_radio = QRadioButton("细胞核 - 线粒体(优先)")
         self.nucleus_mitochondria_radio.setChecked(True)
         self.nucleus_cytoplasm_radio = QRadioButton("细胞核 - 细胞质(优先)")
@@ -55,6 +56,7 @@ class SegmentationUI(QWidget):
         self.button_group.addButton(self.mitochondria_radio)
         self.button_group.addButton(self.nucleus_radio)
         self.button_group.addButton(self.cytoplasm_radio)
+        self.button_group.addButton(self.nucleus_foxo3a_radio)
         self.button_group.addButton(self.nucleus_mitochondria_radio)
         self.button_group.addButton(self.nucleus_cytoplasm_radio)
 
@@ -63,6 +65,7 @@ class SegmentationUI(QWidget):
         left_layout.addWidget(self.mitochondria_radio)
         left_layout.addWidget(self.nucleus_radio)
         left_layout.addWidget(self.cytoplasm_radio)
+        left_layout.addWidget(self.nucleus_foxo3a_radio)
         left_layout.addWidget(self.nucleus_mitochondria_radio)
         left_layout.addWidget(self.nucleus_cytoplasm_radio)
         middle_layout.addLayout(left_layout, 1)
@@ -148,7 +151,6 @@ class SegmentationUI(QWidget):
         button_layout.addWidget(self.stop_button)
 
         main_layout.addLayout(button_layout)
-
         self.setLayout(main_layout)
 
     def select_input_folder(self):
@@ -200,6 +202,28 @@ class SegmentationUI(QWidget):
             elif checked_button == self.nucleus_radio:
                 # 执行细胞核的分割操作
                 print("执行细胞核的分割操作")
+            elif checked_button == self.nucleus_foxo3a_radio:
+                # 执行细胞核 - foxo3a分割操作
+                print("执行细胞核 - foxo3a分割操作")
+                from segmentation.nuclei_foxo3a_seg import FOXO3ANucleiSegmentation
+                model = FOXO3ANucleiSegmentation(
+                    seg_diameter=int(self.cell_diameter_input.text()),
+                    seg_min_diameter=int(self.cell_min_diameter_input.text()),
+                    seg_max_diameter=int(self.cell_max_diameter_input.text()),
+                    seg_nuclei_diameter=int(self.nuclei_diameter_input.text()),
+                    seg_nuclei_min_diameter=int(self.nuclei_min_diameter_input.text()),
+                    seg_nuclei_max_diameter=int(self.nuclei_max_diameter_input.text()),
+                    output_redirector=output_redirector
+                )
+
+                def start_model(image_set_path, seg_model):
+                    if self.stop_event.is_set():
+                        return
+                    return seg_model.start(image_set_path)
+
+                batch = BatchProcessing(input_folder, stop_event=self.stop_event, csv_name='foxo3a.csv')
+                batch.start(start_model, model)  # 传递 stop_event
+
             elif checked_button == self.nucleus_mitochondria_radio:
                 # 执行细胞核 - 线粒体的分割操作
                 print("执行细胞核 - 线粒体的分割操作")

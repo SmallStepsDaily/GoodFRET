@@ -66,6 +66,34 @@ class Segmentation:
         return blurred_image
 
     @staticmethod
+    def common_mask(mit_mask_np, nuclei_mask_np):
+        """
+        提取共同区域
+        """
+        unique_mit_labels = np.unique(mit_mask_np)[1:]  # 排除背景标签 0
+        common_mit_mask = np.zeros_like(mit_mask_np)
+        common_nuclei_mask = np.zeros_like(nuclei_mask_np)
+
+        new_label = 1
+        for mit_label in unique_mit_labels:
+            mit_region = (mit_mask_np == mit_label)
+            # 检查线粒体区域内是否有细胞核
+            nuclei_in_mit = nuclei_mask_np[mit_region]
+            if np.any(nuclei_in_mit):
+                # 找到该线粒体区域内的主要细胞核标签
+                main_nuclei_label = np.bincount(nuclei_in_mit[nuclei_in_mit > 0]).argmax()
+                nuclei_region = (nuclei_mask_np == main_nuclei_label)
+                # 检查该细胞核区域内是否有线粒体
+                mit_in_nuclei = mit_mask_np[nuclei_region]
+                if np.any(mit_in_nuclei):
+                    # 标记共同区域
+                    common_mit_mask[mit_region] = new_label
+                    common_nuclei_mask[nuclei_region] = new_label
+                    new_label += 1
+
+        return common_mit_mask, common_nuclei_mask
+
+    @staticmethod
     def show(self, image_np):
         """
                     输出图像为窗口形式

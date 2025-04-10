@@ -1,5 +1,8 @@
 import os
 import re
+import threading
+from threading import Thread
+
 import pandas as pd
 from batch.file import list_immediate_subdirectories, list_numeric_subdirectories
 
@@ -37,7 +40,7 @@ class BatchProcessing:
     批处理流程
     """
 
-    def __init__(self, root, stop_event):
+    def __init__(self, root, stop_event=threading.Event(), csv_name='FRET.csv'):
         # 单个批次文件路径
         self.root = root
         self.batch_dir_list = []
@@ -52,6 +55,8 @@ class BatchProcessing:
         self.current_batch_data_df = pd.DataFrame()
         # 添加 stop_event 属性
         self.stop_event = stop_event
+        # 保存的文件名称
+        self.csv_name = csv_name
 
     def start(self, process_function, *args, **kwargs):
         """
@@ -96,9 +101,8 @@ class BatchProcessing:
                     other_cols = [col for col in result_df.columns if not col.startswith('Metadata_')]
                     new_col_order = metadata_cols + other_cols
                     result_df = result_df[new_col_order]
-
-                    result_df.to_csv(os.path.join(site_dir_path, 'site_Ed.csv'), index=False)
                     # 将 Ed_df 拼接到当前批次的数据上
+                    self.current_batch_data_df = self.current_batch_data_df.dropna(axis=1, how='all')
                     self.current_batch_data_df = pd.concat([self.current_batch_data_df, result_df], ignore_index=True)
 
         # 只有当 current_batch_data_df 不为空时才保存结果
@@ -109,4 +113,4 @@ class BatchProcessing:
         """
         保存结果
         """
-        self.current_batch_data_df.to_csv(os.path.join(self.root, 'Ed_features.csv'), index=False)
+        self.current_batch_data_df.to_csv(os.path.join(self.root, self.csv_name), index=False)

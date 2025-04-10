@@ -1,4 +1,5 @@
 import os
+import sys
 import warnings
 import cv2
 import numpy as np
@@ -15,8 +16,12 @@ class NucleiSegmentation(Segmentation):
     """
     细胞核分割
     """
-    def __init__(self, seg_diameter=120, seg_min_diameter=80, seg_max_diameter=200):
-        super().__init__()
+    def __init__(self,
+                 output_redirector=sys.stdout,
+                 seg_diameter=120,
+                 seg_min_diameter=80,
+                 seg_max_diameter=200):
+        super().__init__(output_redirector)
         # 读取细胞核图像
         self.channel = [0, 0]
         self.seg_diameter = seg_diameter
@@ -30,7 +35,7 @@ class NucleiSegmentation(Segmentation):
         nuclei_image_np = self.pretreatment(nuclei_image_np)
         print("分割细胞核操作 ===================> ", path)
         current_image_np = self.segmentation(nuclei_image_np)
-        print("保存细胞核mask ===================> ", path)
+        print("保存细胞核操作 ===================> ", path)
         # 保存对应的图像
         self.save(current_image_np, path, 'n_mask.jpg')
 

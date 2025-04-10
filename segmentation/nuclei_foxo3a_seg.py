@@ -4,6 +4,8 @@ import warnings
 import cv2
 import numpy as np
 import tifffile as tiff
+
+from extracting.phenotype.foxo3a_nuclei import calculate_fluorescence_ratio
 from segmentation.seg import Segmentation, filter_labeled_masks_by_diameter
 from cellpose import models
 
@@ -12,9 +14,9 @@ warnings.filterwarnings("ignore", category=UserWarning, message=".*is a low cont
 # 忽略特定的 FutureWarning 主要是高版本的pytorch比较严谨一点
 warnings.filterwarnings("ignore", category=FutureWarning, message=".*You are using `torch.load`.*")
 
-class MitNucleiSegmentation(Segmentation):
+class FOXO3ANucleiSegmentation(Segmentation):
     """
-    线粒体和nuclei两通道组合图像进行分割
+    基于
     """
     def __init__(self,
                  seg_diameter=200,
@@ -25,7 +27,7 @@ class MitNucleiSegmentation(Segmentation):
                  seg_nuclei_max_diameter=200,
                  output_redirector=sys.stdout):
         super().__init__(output_redirector)
-        self.channel = [1, 2]
+        self.channel = [0, 0]
         self.seg_diameter = seg_diameter
         self.seg_min_diameter = seg_min_diameter
         self.seg_max_diameter = seg_max_diameter
@@ -37,17 +39,27 @@ class MitNucleiSegmentation(Segmentation):
 
     def start(self, path):
         # 读取细胞核和线粒体图像
-        mit_image_np = tiff.imread(os.path.join(path, 'Mit.tif'))
+        foxo3a_image_np = tiff.imread(os.path.join(path, 'Foxo3a.tif'))
+        foxo3a_original_image_np = foxo3a_image_np.copy()
         nuclei_image_np = tiff.imread(os.path.join(path, 'Hoechst.tif'))
         # 将两个通道进行组合操作
-        mit_image_np = self.pretreatment(mit_image_np)
+        foxo3a_image_np = self.pretreatment(foxo3a_image_np)
         nuclei_image_np = self.pretreatment(nuclei_image_np)
-        current_image_np = np.stack([mit_image_np, nuclei_image_np], axis=-1)
-        print("分割线粒体和细胞核组合的细胞操作 ===================> " + str(path))
-        mit_mask_np, nuclei_mask_np = self.segmentation(current_image_np)
-        print("保存线粒体和细胞核组合的细胞操作 ===================> " + str(path))
-        self.save(mit_mask_np, path, 'mmask.jpg')
-        self.save(nuclei_mask_np, path, 'nmask.jpg')
+        current_image_np = np.stack([foxo3a_image_np, nuclei_image_np], axis=-1)
+        print("分割Foxo3a和细胞核组合的细胞操作 ===================> " + str(path))
+        foxo3a_mask_np, nuclei_mask_np = self.segmentation(current_image_np)
+        print("保存Foxo3a和细胞核组合的细胞操作 ===================> " + str(path))
+        # self.save(foxo3a_mask_np, path, 'Foxo3a_mask.jpg')
+        # self.save(nuclei_mask_np, path, 'nmask.jpg')
+
+        # 开始计算对应的 foxo3a 的入核比例情况
+        print("计算单细胞区域 foxo3a 入核情况 ===================> " + str(path))
+
+        result = calculate_fluorescence_ratio(foxo3a_original_image_np, foxo3a_mask_np, nuclei_mask_np)
+
+        print("保存单细胞区域 foxo3a 入核情况 ===================> " + str(path))
+
+        return result
 
     def pretreatment(self, image):
         result_image = self.log_image(image)
@@ -55,7 +67,7 @@ class MitNucleiSegmentation(Segmentation):
         return result_image
 
 
-    def seg_mit_nuclei(self, image_np, factor):
+    def seg_foxo3a(self, image_np, factor):
         masks, flows, styles, diams = self.seg_model.eval(image_np,
                                                           diameter=self.seg_diameter / factor,
                                                           channels=self.channel,
@@ -79,7 +91,6 @@ class MitNucleiSegmentation(Segmentation):
                                                           max_diameter=self.seg_nuclei_max_diameter / factor)
         return masks_filtered
 
-
     def segmentation(self, image_np):
         """
         使用cellpose进行分割操作
@@ -96,20 +107,21 @@ class MitNucleiSegmentation(Segmentation):
             factor = original_height / 512
 
         # 分割单细胞区域掩码返回图像
-        mit_mask_np = self.seg_mit_nuclei(image_np, factor)
+        foxo3a_mask_np = self.seg_foxo3a(image_np[:, :, 0], factor)
+
         # 分割细胞核掩码返回图像
         nuclei_mask_np = self.seg_nuclei(image_np[:, :, 1], factor)
 
-        mit_mask_np, nuclei_mask_np = self.common_mask(mit_mask_np, nuclei_mask_np)
+        foxo3a_mask_np, nuclei_mask_np = self.common_mask(foxo3a_mask_np, nuclei_mask_np)
 
         if original_height == original_width:
             # 还原掩码到原始尺寸
-            mit_mask_np = cv2.resize(mit_mask_np.astype(np.uint8), (original_width, original_height),
+            foxo3a_mask_np = cv2.resize(foxo3a_mask_np.astype(np.uint8), (original_width, original_height),
                                          interpolation=cv2.INTER_NEAREST).astype(np.uint8)
             nuclei_mask_np = cv2.resize(nuclei_mask_np.astype(np.uint8), (original_width, original_height),
                                          interpolation=cv2.INTER_NEAREST).astype(np.uint8)
 
-        return mit_mask_np, nuclei_mask_np
+        return foxo3a_mask_np, nuclei_mask_np
 
 
 if __name__ == '__main__':
@@ -122,5 +134,5 @@ if __name__ == '__main__':
     else:
         print("CUDA is NOT available. GPU is OFF.")
 
-    cell = MitNucleiSegmentation()
-    cell.start(r'D:\data\qrm\2025.03.26 A549 24H\ALM\6')
+    cell = FOXO3ANucleiSegmentation()
+    cell.start(r'D:\data\qrm\2025.03.19 PC9 FOXO3A 4H\PC9-afa-4h-d1-c11.16μm\4')
