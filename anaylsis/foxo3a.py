@@ -10,6 +10,10 @@ def plot_boxplot_by_treatment(df, treatment_column='Metadata_treatment', ratio_c
         treatments.remove(control_label)
         treatments = [control_label] + treatments
 
+    df = df.dropna(axis=0)
+    # 对指定列求倒数，使用 .loc 方法
+    df.loc[:, ratio_column] = 1 / df[ratio_column]
+
     # 设置图形样式
     sns.set(style="whitegrid")
 
@@ -35,7 +39,7 @@ def plot_boxplot_by_treatment(df, treatment_column='Metadata_treatment', ratio_c
     # 设置图形标题和坐标轴标签
     plt.title(f'Boxplot of {ratio_column} by {treatment_column}')
     plt.xlabel('Treatment')
-    plt.ylabel('Foxo3a Intensity Ratio')
+    plt.ylabel('Foxo3a Nuclear/Non-Nuclear Intensity Ratio')
 
     # 显示图形
     plt.show()

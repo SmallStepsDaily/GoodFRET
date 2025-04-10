@@ -47,18 +47,15 @@ class FOXO3ANucleiSegmentation(Segmentation):
         nuclei_image_np = self.pretreatment(nuclei_image_np)
         current_image_np = np.stack([foxo3a_image_np, nuclei_image_np], axis=-1)
         print("分割Foxo3a和细胞核组合的细胞操作 ===================> " + str(path))
-        foxo3a_mask_np, nuclei_mask_np = self.segmentation(current_image_np)
+        foxo3a_mask_np, nuclei_mask_np, original_nuclei_mask_np = self.segmentation(current_image_np)
         print("保存Foxo3a和细胞核组合的细胞操作 ===================> " + str(path))
-        # self.save(foxo3a_mask_np, path, 'Foxo3a_mask.jpg')
-        # self.save(nuclei_mask_np, path, 'nmask.jpg')
+        self.save(foxo3a_mask_np, path, 'Foxo3a_mask.jpg')
+        self.save(original_nuclei_mask_np, path, 'nmask.jpg')
 
         # 开始计算对应的 foxo3a 的入核比例情况
         print("计算单细胞区域 foxo3a 入核情况 ===================> " + str(path))
-
         result = calculate_fluorescence_ratio(foxo3a_original_image_np, foxo3a_mask_np, nuclei_mask_np)
-
         print("保存单细胞区域 foxo3a 入核情况 ===================> " + str(path))
-
         return result
 
     def pretreatment(self, image):
@@ -110,18 +107,21 @@ class FOXO3ANucleiSegmentation(Segmentation):
         foxo3a_mask_np = self.seg_foxo3a(image_np[:, :, 0], factor)
 
         # 分割细胞核掩码返回图像
-        nuclei_mask_np = self.seg_nuclei(image_np[:, :, 1], factor)
+        original_nuclei_mask_np = self.seg_nuclei(image_np[:, :, 1], factor)
 
-        foxo3a_mask_np, nuclei_mask_np = self.common_mask(foxo3a_mask_np, nuclei_mask_np)
+        foxo3a_mask_np, filter_nuclei_mask_np = self.common_mask(foxo3a_mask_np, original_nuclei_mask_np)
 
         if original_height == original_width:
             # 还原掩码到原始尺寸
             foxo3a_mask_np = cv2.resize(foxo3a_mask_np.astype(np.uint8), (original_width, original_height),
                                          interpolation=cv2.INTER_NEAREST).astype(np.uint8)
-            nuclei_mask_np = cv2.resize(nuclei_mask_np.astype(np.uint8), (original_width, original_height),
+            filter_nuclei_mask_np = cv2.resize(filter_nuclei_mask_np.astype(np.uint8), (original_width, original_height),
                                          interpolation=cv2.INTER_NEAREST).astype(np.uint8)
+            original_nuclei_mask_np = cv2.resize(original_nuclei_mask_np.astype(np.uint8),
+                                               (original_width, original_height),
+                                               interpolation=cv2.INTER_NEAREST).astype(np.uint8)
 
-        return foxo3a_mask_np, nuclei_mask_np
+        return foxo3a_mask_np, filter_nuclei_mask_np, original_nuclei_mask_np
 
 
 if __name__ == '__main__':

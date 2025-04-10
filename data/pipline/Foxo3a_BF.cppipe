@@ -1,0 +1,224 @@
+CellProfiler Pipeline: http://www.cellprofiler.org
+Version:5
+DateRevision:428
+GitHash:
+ModuleCount:15
+HasImagePlaneDetails:False
+
+Images:[module_num:1|svn_version:'Unknown'|variable_revision_number:2|show_window:False|notes:['To begin creating your project, use the Images module to compile a list of files and/or folders that you want to analyze. You can also specify a set of rules to include only the desired files in your selected folders.']|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
+    :
+    Filter images?:Images only
+    Select the rule criteria:and (extension does isimage) (directory doesnot containregexp "[\/]\.")
+
+Metadata:[module_num:2|svn_version:'Unknown'|variable_revision_number:6|show_window:False|notes:['The Metadata module optionally allows you to extract information describing your images (i.e, metadata) which will be stored along with your measurements. This information can be contained in the file name and/or location, or in an external file.']|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
+    Extract metadata?:Yes
+    Metadata data type:Text
+    Metadata types:{}
+    Extraction method count:1
+    Metadata extraction method:Extract from file/folder names
+    Metadata source:Folder name
+    Regular expression to extract from file name:^(?P<Plate>.*)_(?P<Well>[A-P][0-9]{2})_s(?P<Site>[0-9])_w(?P<ChannelNumber>[0-9])
+    Regular expression to extract from folder name:\\(?P<cell>[A-Za-z0-9]+)-(?P<treatment>[A-Za-z0-9]+)-(?P<hour>\d+(\.\d+)?)h-d(?P<dish>\d{1,2})-c(?P<concentration>\d+(\.\d+)?)¦Ìm\\(?P<site>[0-9]{1,2})$
+    Extract metadata from:All images
+    Select the filtering criteria:and (file does contain "")
+    Metadata file location:Elsewhere...|
+    Match file and image metadata:[]
+    Use case insensitive matching?:No
+    Metadata file name:None
+    Does cached metadata exist?:No
+
+NamesAndTypes:[module_num:3|svn_version:'Unknown'|variable_revision_number:8|show_window:False|notes:['The NamesAndTypes module allows you to assign a meaningful name to each image by which other modules will refer to it.']|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
+    Assign a name to:Images matching rules
+    Select the image type:Grayscale image
+    Name to assign these images:DNA
+    Match metadata:[{'Cell': 'cell', 'Nuclei': 'cell', 'Hoechst': 'cell', 'BF': 'cell'}, {'Cell': 'treatment', 'Nuclei': 'treatment', 'Hoechst': 'treatment', 'BF': 'treatment'}, {'Cell': 'hour', 'Nuclei': 'hour', 'Hoechst': 'hour', 'BF': 'hour'}, {'Cell': 'dish', 'Nuclei': 'dish', 'Hoechst': 'dish', 'BF': 'dish'}, {'Cell': 'site', 'Nuclei': 'site', 'Hoechst': 'site', 'BF': 'site'}]
+    Image set matching method:Metadata
+    Set intensity range from:Image metadata
+    Assignments count:4
+    Single images count:0
+    Maximum intensity:255.0
+    Process as 3D?:No
+    Relative pixel spacing in X:1.0
+    Relative pixel spacing in Y:1.0
+    Relative pixel spacing in Z:1.0
+    Select the rule criteria:and (file does contain "BF_1")
+    Name to assign these images:BF
+    Name to assign these objects:Cell
+    Select the image type:Grayscale image
+    Set intensity range from:Image metadata
+    Maximum intensity:255.0
+    Select the rule criteria:and (file does contain "Hoechst")
+    Name to assign these images:Hoechst
+    Name to assign these objects:Cell
+    Select the image type:Grayscale image
+    Set intensity range from:Image metadata
+    Maximum intensity:255.0
+    Select the rule criteria:and (file does contain "Foxo3a_mask")
+    Name to assign these images:cell
+    Name to assign these objects:Cell
+    Select the image type:Objects
+    Set intensity range from:Image metadata
+    Maximum intensity:255.0
+    Select the rule criteria:and (file does contain "nmask")
+    Name to assign these images:nulcei
+    Name to assign these objects:Nuclei
+    Select the image type:Objects
+    Set intensity range from:Image metadata
+    Maximum intensity:255.0
+
+Groups:[module_num:4|svn_version:'Unknown'|variable_revision_number:2|show_window:False|notes:['The Groups module optionally allows you to split your list of images into image subsets (groups) which will be processed independently of each other. Examples of groupings include screening batches, microtiter plates, time-lapse movies, etc.']|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
+    Do you want to group your images?:Yes
+    grouping metadata count:3
+    Metadata category:cell
+    Metadata category:treatment
+    Metadata category:hour
+
+FilterObjects:[module_num:5|svn_version:'Unknown'|variable_revision_number:10|show_window:False|notes:[]|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
+    Select the objects to filter:Cell
+    Name the output objects:CellObjects
+    Select the filtering mode:Image or mask border
+    Select the filtering method:Limits
+    Select the objects that contain the filtered objects:None
+    Select the location of the rules or classifier file:Elsewhere...|
+    Rules or classifier file name:rules.txt
+    Class number:1
+    Measurement count:1
+    Additional object count:0
+    Assign overlapping child to:Both parents
+    Keep removed objects as a separate set?:No
+    Name the objects removed by the filter:RemovedObjects
+    Select the measurement to filter by:AreaShape_Area
+    Filter using a minimum measurement value?:Yes
+    Minimum value:0.0
+    Filter using a maximum measurement value?:Yes
+    Maximum value:1.0
+    Allow fuzzy feature matching?:No
+
+FilterObjects:[module_num:6|svn_version:'Unknown'|variable_revision_number:10|show_window:False|notes:[]|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
+    Select the objects to filter:Nuclei
+    Name the output objects:NucleiObjects
+    Select the filtering mode:Image or mask border
+    Select the filtering method:Limits
+    Select the objects that contain the filtered objects:None
+    Select the location of the rules or classifier file:Elsewhere...|
+    Rules or classifier file name:rules.txt
+    Class number:1
+    Measurement count:1
+    Additional object count:0
+    Assign overlapping child to:Both parents
+    Keep removed objects as a separate set?:No
+    Name the objects removed by the filter:RemovedObjects
+    Select the measurement to filter by:AreaShape_Area
+    Filter using a minimum measurement value?:Yes
+    Minimum value:0.0
+    Filter using a maximum measurement value?:Yes
+    Maximum value:1.0
+    Allow fuzzy feature matching?:No
+
+MeasureObjectSizeShape:[module_num:7|svn_version:'Unknown'|variable_revision_number:3|show_window:False|notes:[]|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
+    Select object sets to measure:CellObjects, NucleiObjects
+    Calculate the Zernike features?:Yes
+    Calculate the advanced features?:No
+
+MeasureObjectIntensity:[module_num:8|svn_version:'Unknown'|variable_revision_number:4|show_window:False|notes:[]|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
+    Select images to measure:Hoechst
+    Select objects to measure:NucleiObjects
+
+MeasureObjectIntensityDistribution:[module_num:9|svn_version:'Unknown'|variable_revision_number:6|show_window:False|notes:[]|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
+    Select images to measure:Hoechst
+    Hidden:1
+    Hidden:1
+    Hidden:0
+    Calculate intensity Zernikes?:None
+    Maximum zernike moment:9
+    Select objects to measure:NucleiObjects
+    Object to use as center?:These objects
+    Select objects to use as centers:None
+    Scale the bins?:Yes
+    Number of bins:4
+    Maximum radius:100
+
+MeasureGranularity:[module_num:10|svn_version:'Unknown'|variable_revision_number:4|show_window:False|notes:[]|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
+    Select images to measure:Hoechst
+    Measure within objects?:Yes
+    Select objects to measure:NucleiObjects
+    Subsampling factor for granularity measurements:0.25
+    Subsampling factor for background reduction:0.25
+    Radius of structuring element:10
+    Range of the granular spectrum:16
+
+MeasureColocalization:[module_num:11|svn_version:'Unknown'|variable_revision_number:5|show_window:False|notes:[]|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
+    Select images to measure:BF, Hoechst
+    Set threshold as percentage of maximum intensity for the images:15.0
+    Select where to measure correlation:Within objects
+    Select objects to measure:NucleiObjects
+    Run all metrics?:Yes
+    Calculate correlation and slope metrics?:Yes
+    Calculate the Manders coefficients?:Yes
+    Calculate the Rank Weighted Colocalization coefficients?:Yes
+    Calculate the Overlap coefficients?:Yes
+    Calculate the Manders coefficients using Costes auto threshold?:Yes
+    Method for Costes thresholding:Faster
+
+MeasureObjectNeighbors:[module_num:12|svn_version:'Unknown'|variable_revision_number:3|show_window:False|notes:[]|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
+    Select objects to measure:NucleiObjects
+    Select neighboring objects to measure:NucleiObjects
+    Method to determine neighbors:Adjacent
+    Neighbor distance:5
+    Consider objects discarded for touching image border?:Yes
+    Retain the image of objects colored by numbers of neighbors?:No
+    Name the output image:ObjectNeighborCount
+    Select colormap:Blues
+    Retain the image of objects colored by percent of touching pixels?:No
+    Name the output image:PercentTouching
+    Select colormap:Oranges
+
+MeasureTexture:[module_num:13|svn_version:'Unknown'|variable_revision_number:7|show_window:False|notes:[]|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
+    Select images to measure:BF
+    Select objects to measure:CellObjects
+    Enter how many gray levels to measure the texture at:256
+    Hidden:4
+    Measure whole images or objects?:Objects
+    Texture scale to measure:3
+    Texture scale to measure:5
+    Texture scale to measure:10
+    Texture scale to measure:20
+
+MeasureTexture:[module_num:14|svn_version:'Unknown'|variable_revision_number:7|show_window:False|notes:[]|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
+    Select images to measure:Hoechst
+    Select objects to measure:NucleiObjects
+    Enter how many gray levels to measure the texture at:256
+    Hidden:4
+    Measure whole images or objects?:Objects
+    Texture scale to measure:3
+    Texture scale to measure:5
+    Texture scale to measure:10
+    Texture scale to measure:20
+
+ExportToSpreadsheet:[module_num:15|svn_version:'Unknown'|variable_revision_number:13|show_window:False|notes:[]|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
+    Select the column delimiter:Comma (",")
+    Add image metadata columns to your object data file?:Yes
+    Add image file and folder names to your object data file?:No
+    Select the measurements to export:Yes
+    Calculate the per-image mean values for object measurements?:No
+    Calculate the per-image median values for object measurements?:No
+    Calculate the per-image standard deviation values for object measurements?:No
+    Output file location:Default Output Folder|
+    Create a GenePattern GCT file?:No
+    Select source of sample row name:Metadata
+    Select the image to use as the identifier:None
+    Select the metadata to use as the identifier:None
+    Export all measurement types?:No
+    Press button to select measurements:NucleiObjects|Texture_SumAverage_Hoechst_5_00_256,NucleiObjects|Texture_SumAverage_Hoechst_5_03_256,NucleiObjects|Texture_SumAverage_Hoechst_5_02_256,NucleiObjects|Texture_SumAverage_Hoechst_5_01_256,NucleiObjects|Texture_SumAverage_Hoechst_3_02_256,NucleiObjects|Texture_SumAverage_Hoechst_3_03_256,NucleiObjects|Texture_SumAverage_Hoechst_3_00_256,NucleiObjects|Texture_SumAverage_Hoechst_3_01_256,NucleiObjects|Texture_SumAverage_Hoechst_10_03_256,NucleiObjects|Texture_SumAverage_Hoechst_10_02_256,NucleiObjects|Texture_SumAverage_Hoechst_10_01_256,NucleiObjects|Texture_SumAverage_Hoechst_10_00_256,NucleiObjects|Texture_SumAverage_Hoechst_20_01_256,NucleiObjects|Texture_SumAverage_Hoechst_20_00_256,NucleiObjects|Texture_SumAverage_Hoechst_20_03_256,NucleiObjects|Texture_SumAverage_Hoechst_20_02_256,NucleiObjects|Texture_DifferenceEntropy_Hoechst_20_02_256,NucleiObjects|Texture_DifferenceEntropy_Hoechst_20_00_256,NucleiObjects|Texture_DifferenceEntropy_Hoechst_20_03_256,NucleiObjects|Texture_DifferenceEntropy_Hoechst_20_01_256,NucleiObjects|Texture_DifferenceEntropy_Hoechst_3_02_256,NucleiObjects|Texture_DifferenceEntropy_Hoechst_3_03_256,NucleiObjects|Texture_DifferenceEntropy_Hoechst_3_01_256,NucleiObjects|Texture_DifferenceEntropy_Hoechst_3_00_256,NucleiObjects|Texture_DifferenceEntropy_Hoechst_5_01_256,NucleiObjects|Texture_DifferenceEntropy_Hoechst_5_03_256,NucleiObjects|Texture_DifferenceEntropy_Hoechst_5_00_256,NucleiObjects|Texture_DifferenceEntropy_Hoechst_5_02_256,NucleiObjects|Texture_DifferenceEntropy_Hoechst_10_03_256,NucleiObjects|Texture_DifferenceEntropy_Hoechst_10_01_256,NucleiObjects|Texture_DifferenceEntropy_Hoechst_10_00_256,NucleiObjects|Texture_DifferenceEntropy_Hoechst_10_02_256,NucleiObjects|Texture_AngularSecondMoment_Hoechst_5_03_256,NucleiObjects|Texture_AngularSecondMoment_Hoechst_5_01_256,NucleiObjects|Texture_AngularSecondMoment_Hoechst_5_00_256,NucleiObjects|Texture_AngularSecondMoment_Hoechst_5_02_256,NucleiObjects|Texture_AngularSecondMoment_Hoechst_10_02_256,NucleiObjects|Texture_AngularSecondMoment_Hoechst_10_00_256,NucleiObjects|Texture_AngularSecondMoment_Hoechst_10_03_256,NucleiObjects|Texture_AngularSecondMoment_Hoechst_10_01_256,NucleiObjects|Texture_AngularSecondMoment_Hoechst_3_03_256,NucleiObjects|Texture_AngularSecondMoment_Hoechst_3_01_256,NucleiObjects|Texture_AngularSecondMoment_Hoechst_3_00_256,NucleiObjects|Texture_AngularSecondMoment_Hoechst_3_02_256,NucleiObjects|Texture_AngularSecondMoment_Hoechst_20_03_256,NucleiObjects|Texture_AngularSecondMoment_Hoechst_20_00_256,NucleiObjects|Texture_AngularSecondMoment_Hoechst_20_01_256,NucleiObjects|Texture_AngularSecondMoment_Hoechst_20_02_256,NucleiObjects|Texture_Variance_Hoechst_20_02_256,NucleiObjects|Texture_Variance_Hoechst_20_01_256,NucleiObjects|Texture_Variance_Hoechst_20_03_256,NucleiObjects|Texture_Variance_Hoechst_20_00_256,NucleiObjects|Texture_Variance_Hoechst_5_00_256,NucleiObjects|Texture_Variance_Hoechst_5_02_256,NucleiObjects|Texture_Variance_Hoechst_5_01_256,NucleiObjects|Texture_Variance_Hoechst_5_03_256,NucleiObjects|Texture_Variance_Hoechst_10_03_256,NucleiObjects|Texture_Variance_Hoechst_10_02_256,NucleiObjects|Texture_Variance_Hoechst_10_00_256,NucleiObjects|Texture_Variance_Hoechst_10_01_256,NucleiObjects|Texture_Variance_Hoechst_3_01_256,NucleiObjects|Texture_Variance_Hoechst_3_02_256,NucleiObjects|Texture_Variance_Hoechst_3_03_256,NucleiObjects|Texture_Variance_Hoechst_3_00_256,NucleiObjects|Texture_InverseDifferenceMoment_Hoechst_5_00_256,NucleiObjects|Texture_InverseDifferenceMoment_Hoechst_5_03_256,NucleiObjects|Texture_InverseDifferenceMoment_Hoechst_5_01_256,NucleiObjects|Texture_InverseDifferenceMoment_Hoechst_5_02_256,NucleiObjects|Texture_InverseDifferenceMoment_Hoechst_3_00_256,NucleiObjects|Texture_InverseDifferenceMoment_Hoechst_3_01_256,NucleiObjects|Texture_InverseDifferenceMoment_Hoechst_3_03_256,NucleiObjects|Texture_InverseDifferenceMoment_Hoechst_3_02_256,NucleiObjects|Texture_InverseDifferenceMoment_Hoechst_20_00_256,NucleiObjects|Texture_InverseDifferenceMoment_Hoechst_20_02_256,NucleiObjects|Texture_InverseDifferenceMoment_Hoechst_20_03_256,NucleiObjects|Texture_InverseDifferenceMoment_Hoechst_20_01_256,NucleiObjects|Texture_InverseDifferenceMoment_Hoechst_10_01_256,NucleiObjects|Texture_InverseDifferenceMoment_Hoechst_10_03_256,NucleiObjects|Texture_InverseDifferenceMoment_Hoechst_10_00_256,NucleiObjects|Texture_InverseDifferenceMoment_Hoechst_10_02_256,NucleiObjects|Texture_InfoMeas2_Hoechst_10_03_256,NucleiObjects|Texture_InfoMeas2_Hoechst_10_02_256,NucleiObjects|Texture_InfoMeas2_Hoechst_10_00_256,NucleiObjects|Texture_InfoMeas2_Hoechst_10_01_256,NucleiObjects|Texture_InfoMeas2_Hoechst_5_03_256,NucleiObjects|Texture_InfoMeas2_Hoechst_5_00_256,NucleiObjects|Texture_InfoMeas2_Hoechst_5_02_256,NucleiObjects|Texture_InfoMeas2_Hoechst_5_01_256,NucleiObjects|Texture_InfoMeas2_Hoechst_3_03_256,NucleiObjects|Texture_InfoMeas2_Hoechst_3_00_256,NucleiObjects|Texture_InfoMeas2_Hoechst_3_01_256,NucleiObjects|Texture_InfoMeas2_Hoechst_3_02_256,NucleiObjects|Texture_InfoMeas2_Hoechst_20_00_256,NucleiObjects|Texture_InfoMeas2_Hoechst_20_03_256,NucleiObjects|Texture_InfoMeas2_Hoechst_20_02_256,NucleiObjects|Texture_InfoMeas2_Hoechst_20_01_256,NucleiObjects|Texture_Contrast_Hoechst_5_00_256,NucleiObjects|Texture_Contrast_Hoechst_5_01_256,NucleiObjects|Texture_Contrast_Hoechst_5_03_256,NucleiObjects|Texture_Contrast_Hoechst_5_02_256,NucleiObjects|Texture_Contrast_Hoechst_20_01_256,NucleiObjects|Texture_Contrast_Hoechst_20_02_256,NucleiObjects|Texture_Contrast_Hoechst_20_03_256,NucleiObjects|Texture_Contrast_Hoechst_20_00_256,NucleiObjects|Texture_Contrast_Hoechst_10_01_256,NucleiObjects|Texture_Contrast_Hoechst_10_02_256,NucleiObjects|Texture_Contrast_Hoechst_10_00_256,NucleiObjects|Texture_Contrast_Hoechst_10_03_256,NucleiObjects|Texture_Contrast_Hoechst_3_00_256,NucleiObjects|Texture_Contrast_Hoechst_3_01_256,NucleiObjects|Texture_Contrast_Hoechst_3_03_256,NucleiObjects|Texture_Contrast_Hoechst_3_02_256,NucleiObjects|Texture_Correlation_Hoechst_3_03_256,NucleiObjects|Texture_Correlation_Hoechst_3_02_256,NucleiObjects|Texture_Correlation_Hoechst_3_01_256,NucleiObjects|Texture_Correlation_Hoechst_3_00_256,NucleiObjects|Texture_Correlation_Hoechst_5_03_256,NucleiObjects|Texture_Correlation_Hoechst_5_02_256,NucleiObjects|Texture_Correlation_Hoechst_5_00_256,NucleiObjects|Texture_Correlation_Hoechst_5_01_256,NucleiObjects|Texture_Correlation_Hoechst_20_00_256,NucleiObjects|Texture_Correlation_Hoechst_20_03_256,NucleiObjects|Texture_Correlation_Hoechst_20_02_256,NucleiObjects|Texture_Correlation_Hoechst_20_01_256,NucleiObjects|Texture_Correlation_Hoechst_10_02_256,NucleiObjects|Texture_Correlation_Hoechst_10_00_256,NucleiObjects|Texture_Correlation_Hoechst_10_01_256,NucleiObjects|Texture_Correlation_Hoechst_10_03_256,NucleiObjects|Texture_DifferenceVariance_Hoechst_3_02_256,NucleiObjects|Texture_DifferenceVariance_Hoechst_3_03_256,NucleiObjects|Texture_DifferenceVariance_Hoechst_3_01_256,NucleiObjects|Texture_DifferenceVariance_Hoechst_3_00_256,NucleiObjects|Texture_DifferenceVariance_Hoechst_20_02_256,NucleiObjects|Texture_DifferenceVariance_Hoechst_20_00_256,NucleiObjects|Texture_DifferenceVariance_Hoechst_20_01_256,NucleiObjects|Texture_DifferenceVariance_Hoechst_20_03_256,NucleiObjects|Texture_DifferenceVariance_Hoechst_5_00_256,NucleiObjects|Texture_DifferenceVariance_Hoechst_5_01_256,NucleiObjects|Texture_DifferenceVariance_Hoechst_5_02_256,NucleiObjects|Texture_DifferenceVariance_Hoechst_5_03_256,NucleiObjects|Texture_DifferenceVariance_Hoechst_10_02_256,NucleiObjects|Texture_DifferenceVariance_Hoechst_10_00_256,NucleiObjects|Texture_DifferenceVariance_Hoechst_10_01_256,NucleiObjects|Texture_DifferenceVariance_Hoechst_10_03_256,NucleiObjects|Texture_SumEntropy_Hoechst_5_00_256,NucleiObjects|Texture_SumEntropy_Hoechst_5_01_256,NucleiObjects|Texture_SumEntropy_Hoechst_5_02_256,NucleiObjects|Texture_SumEntropy_Hoechst_5_03_256,NucleiObjects|Texture_SumEntropy_Hoechst_3_03_256,NucleiObjects|Texture_SumEntropy_Hoechst_3_01_256,NucleiObjects|Texture_SumEntropy_Hoechst_3_02_256,NucleiObjects|Texture_SumEntropy_Hoechst_3_00_256,NucleiObjects|Texture_SumEntropy_Hoechst_20_00_256,NucleiObjects|Texture_SumEntropy_Hoechst_20_03_256,NucleiObjects|Texture_SumEntropy_Hoechst_20_01_256,NucleiObjects|Texture_SumEntropy_Hoechst_20_02_256,NucleiObjects|Texture_SumEntropy_Hoechst_10_01_256,NucleiObjects|Texture_SumEntropy_Hoechst_10_03_256,NucleiObjects|Texture_SumEntropy_Hoechst_10_00_256,NucleiObjects|Texture_SumEntropy_Hoechst_10_02_256,NucleiObjects|Texture_InfoMeas1_Hoechst_10_00_256,NucleiObjects|Texture_InfoMeas1_Hoechst_10_03_256,NucleiObjects|Texture_InfoMeas1_Hoechst_10_02_256,NucleiObjects|Texture_InfoMeas1_Hoechst_10_01_256,NucleiObjects|Texture_InfoMeas1_Hoechst_20_01_256,NucleiObjects|Texture_InfoMeas1_Hoechst_20_02_256,NucleiObjects|Texture_InfoMeas1_Hoechst_20_00_256,NucleiObjects|Texture_InfoMeas1_Hoechst_20_03_256,NucleiObjects|Texture_InfoMeas1_Hoechst_5_01_256,NucleiObjects|Texture_InfoMeas1_Hoechst_5_02_256,NucleiObjects|Texture_InfoMeas1_Hoechst_5_00_256,NucleiObjects|Texture_InfoMeas1_Hoechst_5_03_256,NucleiObjects|Texture_InfoMeas1_Hoechst_3_00_256,NucleiObjects|Texture_InfoMeas1_Hoechst_3_03_256,NucleiObjects|Texture_InfoMeas1_Hoechst_3_02_256,NucleiObjects|Texture_InfoMeas1_Hoechst_3_01_256,NucleiObjects|Texture_Entropy_Hoechst_10_01_256,NucleiObjects|Texture_Entropy_Hoechst_10_02_256,NucleiObjects|Texture_Entropy_Hoechst_10_03_256,NucleiObjects|Texture_Entropy_Hoechst_10_00_256,NucleiObjects|Texture_Entropy_Hoechst_5_03_256,NucleiObjects|Texture_Entropy_Hoechst_5_00_256,NucleiObjects|Texture_Entropy_Hoechst_5_02_256,NucleiObjects|Texture_Entropy_Hoechst_5_01_256,NucleiObjects|Texture_Entropy_Hoechst_20_03_256,NucleiObjects|Texture_Entropy_Hoechst_20_00_256,NucleiObjects|Texture_Entropy_Hoechst_20_02_256,NucleiObjects|Texture_Entropy_Hoechst_20_01_256,NucleiObjects|Texture_Entropy_Hoechst_3_00_256,NucleiObjects|Texture_Entropy_Hoechst_3_01_256,NucleiObjects|Texture_Entropy_Hoechst_3_03_256,NucleiObjects|Texture_Entropy_Hoechst_3_02_256,NucleiObjects|Texture_SumVariance_Hoechst_3_02_256,NucleiObjects|Texture_SumVariance_Hoechst_3_03_256,NucleiObjects|Texture_SumVariance_Hoechst_3_00_256,NucleiObjects|Texture_SumVariance_Hoechst_3_01_256,NucleiObjects|Texture_SumVariance_Hoechst_10_03_256,NucleiObjects|Texture_SumVariance_Hoechst_10_02_256,NucleiObjects|Texture_SumVariance_Hoechst_10_01_256,NucleiObjects|Texture_SumVariance_Hoechst_10_00_256,NucleiObjects|Texture_SumVariance_Hoechst_20_03_256,NucleiObjects|Texture_SumVariance_Hoechst_20_00_256,NucleiObjects|Texture_SumVariance_Hoechst_20_02_256,NucleiObjects|Texture_SumVariance_Hoechst_20_01_256,NucleiObjects|Texture_SumVariance_Hoechst_5_02_256,NucleiObjects|Texture_SumVariance_Hoechst_5_03_256,NucleiObjects|Texture_SumVariance_Hoechst_5_00_256,NucleiObjects|Texture_SumVariance_Hoechst_5_01_256,NucleiObjects|AreaShape_Zernike_6_0,NucleiObjects|AreaShape_Zernike_6_6,NucleiObjects|AreaShape_Zernike_6_2,NucleiObjects|AreaShape_Zernike_6_4,NucleiObjects|AreaShape_Zernike_7_3,NucleiObjects|AreaShape_Zernike_7_1,NucleiObjects|AreaShape_Zernike_7_5,NucleiObjects|AreaShape_Zernike_7_7,NucleiObjects|AreaShape_Zernike_5_3,NucleiObjects|AreaShape_Zernike_5_1,NucleiObjects|AreaShape_Zernike_5_5,NucleiObjects|AreaShape_Zernike_8_4,NucleiObjects|AreaShape_Zernike_8_0,NucleiObjects|AreaShape_Zernike_8_8,NucleiObjects|AreaShape_Zernike_8_2,NucleiObjects|AreaShape_Zernike_8_6,NucleiObjects|AreaShape_Zernike_3_1,NucleiObjects|AreaShape_Zernike_3_3,NucleiObjects|AreaShape_Zernike_9_3,NucleiObjects|AreaShape_Zernike_9_1,NucleiObjects|AreaShape_Zernike_9_9,NucleiObjects|AreaShape_Zernike_9_7,NucleiObjects|AreaShape_Zernike_9_5,NucleiObjects|AreaShape_Zernike_2_0,NucleiObjects|AreaShape_Zernike_2_2,NucleiObjects|AreaShape_Zernike_1_1,NucleiObjects|AreaShape_Zernike_0_0,NucleiObjects|AreaShape_Zernike_4_4,NucleiObjects|AreaShape_Zernike_4_0,NucleiObjects|AreaShape_Zernike_4_2,NucleiObjects|AreaShape_Compactness,NucleiObjects|AreaShape_MaxFeretDiameter,NucleiObjects|AreaShape_BoundingBoxArea,NucleiObjects|AreaShape_EulerNumber,NucleiObjects|AreaShape_MajorAxisLength,NucleiObjects|AreaShape_EquivalentDiameter,NucleiObjects|AreaShape_MeanRadius,NucleiObjects|AreaShape_Extent,NucleiObjects|AreaShape_BoundingBoxMaximum_X,NucleiObjects|AreaShape_BoundingBoxMaximum_Y,NucleiObjects|AreaShape_ConvexArea,NucleiObjects|AreaShape_Area,NucleiObjects|AreaShape_Center_X,NucleiObjects|AreaShape_Center_Y,NucleiObjects|AreaShape_BoundingBoxMinimum_X,NucleiObjects|AreaShape_BoundingBoxMinimum_Y,NucleiObjects|AreaShape_Solidity,NucleiObjects|AreaShape_Orientation,NucleiObjects|AreaShape_MinFeretDiameter,NucleiObjects|AreaShape_FormFactor,NucleiObjects|AreaShape_MedianRadius,NucleiObjects|AreaShape_Perimeter,NucleiObjects|AreaShape_Eccentricity,NucleiObjects|AreaShape_MinorAxisLength,NucleiObjects|AreaShape_MaximumRadius,NucleiObjects|Granularity_5_Hoechst,NucleiObjects|Granularity_9_Hoechst,NucleiObjects|Granularity_10_Hoechst,NucleiObjects|Granularity_6_Hoechst,NucleiObjects|Granularity_1_Hoechst,NucleiObjects|Granularity_15_Hoechst,NucleiObjects|Granularity_7_Hoechst,NucleiObjects|Granularity_13_Hoechst,NucleiObjects|Granularity_8_Hoechst,NucleiObjects|Granularity_4_Hoechst,NucleiObjects|Granularity_14_Hoechst,NucleiObjects|Granularity_2_Hoechst,NucleiObjects|Granularity_12_Hoechst,NucleiObjects|Granularity_11_Hoechst,NucleiObjects|Granularity_16_Hoechst,NucleiObjects|Granularity_3_Hoechst,NucleiObjects|RadialDistribution_RadialCV_Hoechst_4of4,NucleiObjects|RadialDistribution_RadialCV_Hoechst_2of4,NucleiObjects|RadialDistribution_RadialCV_Hoechst_1of4,NucleiObjects|RadialDistribution_RadialCV_Hoechst_3of4,NucleiObjects|RadialDistribution_FracAtD_Hoechst_3of4,NucleiObjects|RadialDistribution_FracAtD_Hoechst_2of4,NucleiObjects|RadialDistribution_FracAtD_Hoechst_1of4,NucleiObjects|RadialDistribution_FracAtD_Hoechst_4of4,NucleiObjects|RadialDistribution_MeanFrac_Hoechst_4of4,NucleiObjects|RadialDistribution_MeanFrac_Hoechst_1of4,NucleiObjects|RadialDistribution_MeanFrac_Hoechst_3of4,NucleiObjects|RadialDistribution_MeanFrac_Hoechst_2of4,NucleiObjects|Intensity_MaxIntensityEdge_Hoechst,NucleiObjects|Intensity_MinIntensity_Hoechst,NucleiObjects|Intensity_MADIntensity_Hoechst,NucleiObjects|Intensity_StdIntensityEdge_Hoechst,NucleiObjects|Intensity_UpperQuartileIntensity_Hoechst,NucleiObjects|Intensity_StdIntensity_Hoechst,NucleiObjects|Intensity_IntegratedIntensity_Hoechst,NucleiObjects|Intensity_MedianIntensity_Hoechst,NucleiObjects|Intensity_MinIntensityEdge_Hoechst,NucleiObjects|Intensity_MeanIntensityEdge_Hoechst,NucleiObjects|Intensity_IntegratedIntensityEdge_Hoechst,NucleiObjects|Intensity_LowerQuartileIntensity_Hoechst,NucleiObjects|Intensity_MeanIntensity_Hoechst,NucleiObjects|Intensity_MaxIntensity_Hoechst,NucleiObjects|Intensity_MassDisplacement_Hoechst,NucleiObjects|Neighbors_NumberOfNeighbors_Adjacent,NucleiObjects|Neighbors_FirstClosestDistance_Adjacent,NucleiObjects|Neighbors_FirstClosestObjectNumber_Adjacent,NucleiObjects|Neighbors_SecondClosestDistance_Adjacent,NucleiObjects|Neighbors_AngleBetweenNeighbors_Adjacent,NucleiObjects|Neighbors_SecondClosestObjectNumber_Adjacent,NucleiObjects|Neighbors_PercentTouching_Adjacent,NucleiObjects|Correlation_Manders_Hoechst_BF,NucleiObjects|Correlation_Manders_BF_Hoechst,NucleiObjects|Correlation_Costes_Hoechst_BF,NucleiObjects|Correlation_Costes_BF_Hoechst,NucleiObjects|Correlation_RWC_BF_Hoechst,NucleiObjects|Correlation_RWC_Hoechst_BF,NucleiObjects|Correlation_K_BF_Hoechst,NucleiObjects|Correlation_K_Hoechst_BF,NucleiObjects|Correlation_Correlation_BF_Hoechst,NucleiObjects|Correlation_Overlap_BF_Hoechst,CellObjects|Texture_DifferenceVariance_BF_20_02_256,CellObjects|Texture_DifferenceVariance_BF_20_03_256,CellObjects|Texture_DifferenceVariance_BF_20_00_256,CellObjects|Texture_DifferenceVariance_BF_20_01_256,CellObjects|Texture_DifferenceVariance_BF_10_00_256,CellObjects|Texture_DifferenceVariance_BF_10_01_256,CellObjects|Texture_DifferenceVariance_BF_10_03_256,CellObjects|Texture_DifferenceVariance_BF_10_02_256,CellObjects|Texture_DifferenceVariance_BF_3_03_256,CellObjects|Texture_DifferenceVariance_BF_3_00_256,CellObjects|Texture_DifferenceVariance_BF_3_01_256,CellObjects|Texture_DifferenceVariance_BF_3_02_256,CellObjects|Texture_DifferenceVariance_BF_5_01_256,CellObjects|Texture_DifferenceVariance_BF_5_00_256,CellObjects|Texture_DifferenceVariance_BF_5_03_256,CellObjects|Texture_DifferenceVariance_BF_5_02_256,CellObjects|Texture_InfoMeas2_BF_3_01_256,CellObjects|Texture_InfoMeas2_BF_3_00_256,CellObjects|Texture_InfoMeas2_BF_3_02_256,CellObjects|Texture_InfoMeas2_BF_3_03_256,CellObjects|Texture_InfoMeas2_BF_20_01_256,CellObjects|Texture_InfoMeas2_BF_20_00_256,CellObjects|Texture_InfoMeas2_BF_20_02_256,CellObjects|Texture_InfoMeas2_BF_20_03_256,CellObjects|Texture_InfoMeas2_BF_10_03_256,CellObjects|Texture_InfoMeas2_BF_10_01_256,CellObjects|Texture_InfoMeas2_BF_10_00_256,CellObjects|Texture_InfoMeas2_BF_10_02_256,CellObjects|Texture_InfoMeas2_BF_5_03_256,CellObjects|Texture_InfoMeas2_BF_5_01_256,CellObjects|Texture_InfoMeas2_BF_5_00_256,CellObjects|Texture_InfoMeas2_BF_5_02_256,CellObjects|Texture_InverseDifferenceMoment_BF_5_02_256,CellObjects|Texture_InverseDifferenceMoment_BF_5_01_256,CellObjects|Texture_InverseDifferenceMoment_BF_5_00_256,CellObjects|Texture_InverseDifferenceMoment_BF_5_03_256,CellObjects|Texture_InverseDifferenceMoment_BF_20_02_256,CellObjects|Texture_InverseDifferenceMoment_BF_20_03_256,CellObjects|Texture_InverseDifferenceMoment_BF_20_01_256,CellObjects|Texture_InverseDifferenceMoment_BF_20_00_256,CellObjects|Texture_InverseDifferenceMoment_BF_10_01_256,CellObjects|Texture_InverseDifferenceMoment_BF_10_03_256,CellObjects|Texture_InverseDifferenceMoment_BF_10_00_256,CellObjects|Texture_InverseDifferenceMoment_BF_10_02_256,CellObjects|Texture_InverseDifferenceMoment_BF_3_02_256,CellObjects|Texture_InverseDifferenceMoment_BF_3_01_256,CellObjects|Texture_InverseDifferenceMoment_BF_3_03_256,CellObjects|Texture_InverseDifferenceMoment_BF_3_00_256,CellObjects|Texture_Correlation_BF_5_00_256,CellObjects|Texture_Correlation_BF_5_01_256,CellObjects|Texture_Correlation_BF_5_02_256,CellObjects|Texture_Correlation_BF_5_03_256,CellObjects|Texture_Correlation_BF_3_03_256,CellObjects|Texture_Correlation_BF_3_00_256,CellObjects|Texture_Correlation_BF_3_02_256,CellObjects|Texture_Correlation_BF_3_01_256,CellObjects|Texture_Correlation_BF_10_02_256,CellObjects|Texture_Correlation_BF_10_01_256,CellObjects|Texture_Correlation_BF_10_03_256,CellObjects|Texture_Correlation_BF_10_00_256,CellObjects|Texture_Correlation_BF_20_03_256,CellObjects|Texture_Correlation_BF_20_00_256,CellObjects|Texture_Correlation_BF_20_01_256,CellObjects|Texture_Correlation_BF_20_02_256,CellObjects|Texture_Contrast_BF_10_03_256,CellObjects|Texture_Contrast_BF_10_02_256,CellObjects|Texture_Contrast_BF_10_00_256,CellObjects|Texture_Contrast_BF_10_01_256,CellObjects|Texture_Contrast_BF_3_00_256,CellObjects|Texture_Contrast_BF_3_01_256,CellObjects|Texture_Contrast_BF_3_02_256,CellObjects|Texture_Contrast_BF_3_03_256,CellObjects|Texture_Contrast_BF_20_00_256,CellObjects|Texture_Contrast_BF_20_01_256,CellObjects|Texture_Contrast_BF_20_02_256,CellObjects|Texture_Contrast_BF_20_03_256,CellObjects|Texture_Contrast_BF_5_03_256,CellObjects|Texture_Contrast_BF_5_01_256,CellObjects|Texture_Contrast_BF_5_00_256,CellObjects|Texture_Contrast_BF_5_02_256,CellObjects|Texture_DifferenceEntropy_BF_3_03_256,CellObjects|Texture_DifferenceEntropy_BF_3_00_256,CellObjects|Texture_DifferenceEntropy_BF_3_01_256,CellObjects|Texture_DifferenceEntropy_BF_3_02_256,CellObjects|Texture_DifferenceEntropy_BF_5_00_256,CellObjects|Texture_DifferenceEntropy_BF_5_01_256,CellObjects|Texture_DifferenceEntropy_BF_5_03_256,CellObjects|Texture_DifferenceEntropy_BF_5_02_256,CellObjects|Texture_DifferenceEntropy_BF_10_01_256,CellObjects|Texture_DifferenceEntropy_BF_10_03_256,CellObjects|Texture_DifferenceEntropy_BF_10_02_256,CellObjects|Texture_DifferenceEntropy_BF_10_00_256,CellObjects|Texture_DifferenceEntropy_BF_20_00_256,CellObjects|Texture_DifferenceEntropy_BF_20_03_256,CellObjects|Texture_DifferenceEntropy_BF_20_01_256,CellObjects|Texture_DifferenceEntropy_BF_20_02_256,CellObjects|Texture_SumEntropy_BF_3_02_256,CellObjects|Texture_SumEntropy_BF_3_03_256,CellObjects|Texture_SumEntropy_BF_3_00_256,CellObjects|Texture_SumEntropy_BF_3_01_256,CellObjects|Texture_SumEntropy_BF_5_01_256,CellObjects|Texture_SumEntropy_BF_5_03_256,CellObjects|Texture_SumEntropy_BF_5_00_256,CellObjects|Texture_SumEntropy_BF_5_02_256,CellObjects|Texture_SumEntropy_BF_10_00_256,CellObjects|Texture_SumEntropy_BF_10_02_256,CellObjects|Texture_SumEntropy_BF_10_01_256,CellObjects|Texture_SumEntropy_BF_10_03_256,CellObjects|Texture_SumEntropy_BF_20_00_256,CellObjects|Texture_SumEntropy_BF_20_03_256,CellObjects|Texture_SumEntropy_BF_20_02_256,CellObjects|Texture_SumEntropy_BF_20_01_256,CellObjects|Texture_SumVariance_BF_3_02_256,CellObjects|Texture_SumVariance_BF_3_03_256,CellObjects|Texture_SumVariance_BF_3_00_256,CellObjects|Texture_SumVariance_BF_3_01_256,CellObjects|Texture_SumVariance_BF_10_02_256,CellObjects|Texture_SumVariance_BF_10_03_256,CellObjects|Texture_SumVariance_BF_10_01_256,CellObjects|Texture_SumVariance_BF_10_00_256,CellObjects|Texture_SumVariance_BF_5_03_256,CellObjects|Texture_SumVariance_BF_5_01_256,CellObjects|Texture_SumVariance_BF_5_02_256,CellObjects|Texture_SumVariance_BF_5_00_256,CellObjects|Texture_SumVariance_BF_20_03_256,CellObjects|Texture_SumVariance_BF_20_02_256,CellObjects|Texture_SumVariance_BF_20_00_256,CellObjects|Texture_SumVariance_BF_20_01_256,CellObjects|Texture_Entropy_BF_3_02_256,CellObjects|Texture_Entropy_BF_3_03_256,CellObjects|Texture_Entropy_BF_3_00_256,CellObjects|Texture_Entropy_BF_3_01_256,CellObjects|Texture_Entropy_BF_5_01_256,CellObjects|Texture_Entropy_BF_5_00_256,CellObjects|Texture_Entropy_BF_5_03_256,CellObjects|Texture_Entropy_BF_5_02_256,CellObjects|Texture_Entropy_BF_20_00_256,CellObjects|Texture_Entropy_BF_20_01_256,CellObjects|Texture_Entropy_BF_20_03_256,CellObjects|Texture_Entropy_BF_20_02_256,CellObjects|Texture_Entropy_BF_10_00_256,CellObjects|Texture_Entropy_BF_10_03_256,CellObjects|Texture_Entropy_BF_10_02_256,CellObjects|Texture_Entropy_BF_10_01_256,CellObjects|Texture_InfoMeas1_BF_10_00_256,CellObjects|Texture_InfoMeas1_BF_10_02_256,CellObjects|Texture_InfoMeas1_BF_10_01_256,CellObjects|Texture_InfoMeas1_BF_10_03_256,CellObjects|Texture_InfoMeas1_BF_5_02_256,CellObjects|Texture_InfoMeas1_BF_5_03_256,CellObjects|Texture_InfoMeas1_BF_5_00_256,CellObjects|Texture_InfoMeas1_BF_5_01_256,CellObjects|Texture_InfoMeas1_BF_20_03_256,CellObjects|Texture_InfoMeas1_BF_20_02_256,CellObjects|Texture_InfoMeas1_BF_20_01_256,CellObjects|Texture_InfoMeas1_BF_20_00_256,CellObjects|Texture_InfoMeas1_BF_3_00_256,CellObjects|Texture_InfoMeas1_BF_3_03_256,CellObjects|Texture_InfoMeas1_BF_3_01_256,CellObjects|Texture_InfoMeas1_BF_3_02_256,CellObjects|Texture_Variance_BF_20_01_256,CellObjects|Texture_Variance_BF_20_00_256,CellObjects|Texture_Variance_BF_20_02_256,CellObjects|Texture_Variance_BF_20_03_256,CellObjects|Texture_Variance_BF_5_01_256,CellObjects|Texture_Variance_BF_5_03_256,CellObjects|Texture_Variance_BF_5_00_256,CellObjects|Texture_Variance_BF_5_02_256,CellObjects|Texture_Variance_BF_3_01_256,CellObjects|Texture_Variance_BF_3_03_256,CellObjects|Texture_Variance_BF_3_00_256,CellObjects|Texture_Variance_BF_3_02_256,CellObjects|Texture_Variance_BF_10_01_256,CellObjects|Texture_Variance_BF_10_03_256,CellObjects|Texture_Variance_BF_10_00_256,CellObjects|Texture_Variance_BF_10_02_256,CellObjects|Texture_SumAverage_BF_10_02_256,CellObjects|Texture_SumAverage_BF_10_03_256,CellObjects|Texture_SumAverage_BF_10_00_256,CellObjects|Texture_SumAverage_BF_10_01_256,CellObjects|Texture_SumAverage_BF_5_00_256,CellObjects|Texture_SumAverage_BF_5_01_256,CellObjects|Texture_SumAverage_BF_5_02_256,CellObjects|Texture_SumAverage_BF_5_03_256,CellObjects|Texture_SumAverage_BF_3_00_256,CellObjects|Texture_SumAverage_BF_3_01_256,CellObjects|Texture_SumAverage_BF_3_02_256,CellObjects|Texture_SumAverage_BF_3_03_256,CellObjects|Texture_SumAverage_BF_20_03_256,CellObjects|Texture_SumAverage_BF_20_00_256,CellObjects|Texture_SumAverage_BF_20_01_256,CellObjects|Texture_SumAverage_BF_20_02_256,CellObjects|Texture_AngularSecondMoment_BF_20_01_256,CellObjects|Texture_AngularSecondMoment_BF_20_00_256,CellObjects|Texture_AngularSecondMoment_BF_20_02_256,CellObjects|Texture_AngularSecondMoment_BF_20_03_256,CellObjects|Texture_AngularSecondMoment_BF_10_01_256,CellObjects|Texture_AngularSecondMoment_BF_10_00_256,CellObjects|Texture_AngularSecondMoment_BF_10_03_256,CellObjects|Texture_AngularSecondMoment_BF_10_02_256,CellObjects|Texture_AngularSecondMoment_BF_5_02_256,CellObjects|Texture_AngularSecondMoment_BF_5_01_256,CellObjects|Texture_AngularSecondMoment_BF_5_03_256,CellObjects|Texture_AngularSecondMoment_BF_5_00_256,CellObjects|Texture_AngularSecondMoment_BF_3_03_256,CellObjects|Texture_AngularSecondMoment_BF_3_02_256,CellObjects|Texture_AngularSecondMoment_BF_3_01_256,CellObjects|Texture_AngularSecondMoment_BF_3_00_256,CellObjects|AreaShape_MaxFeretDiameter,CellObjects|AreaShape_Zernike_8_0,CellObjects|AreaShape_Zernike_8_2,CellObjects|AreaShape_Zernike_8_6,CellObjects|AreaShape_Zernike_8_8,CellObjects|AreaShape_Zernike_8_4,CellObjects|AreaShape_Zernike_4_4,CellObjects|AreaShape_Zernike_4_2,CellObjects|AreaShape_Zernike_4_0,CellObjects|AreaShape_Zernike_5_1,CellObjects|AreaShape_Zernike_5_3,CellObjects|AreaShape_Zernike_5_5,CellObjects|AreaShape_Zernike_6_0,CellObjects|AreaShape_Zernike_6_2,CellObjects|AreaShape_Zernike_6_6,CellObjects|AreaShape_Zernike_6_4,CellObjects|AreaShape_Zernike_9_7,CellObjects|AreaShape_Zernike_9_3,CellObjects|AreaShape_Zernike_9_1,CellObjects|AreaShape_Zernike_9_9,CellObjects|AreaShape_Zernike_9_5,CellObjects|AreaShape_Zernike_7_7,CellObjects|AreaShape_Zernike_7_5,CellObjects|AreaShape_Zernike_7_3,CellObjects|AreaShape_Zernike_7_1,CellObjects|AreaShape_Zernike_3_3,CellObjects|AreaShape_Zernike_3_1,CellObjects|AreaShape_Zernike_2_2,CellObjects|AreaShape_Zernike_2_0,CellObjects|AreaShape_Zernike_1_1,CellObjects|AreaShape_Zernike_0_0,CellObjects|AreaShape_MajorAxisLength,CellObjects|AreaShape_MinorAxisLength,CellObjects|AreaShape_Orientation,CellObjects|AreaShape_Perimeter,CellObjects|AreaShape_Center_Y,CellObjects|AreaShape_Center_X,CellObjects|AreaShape_Extent,CellObjects|AreaShape_BoundingBoxMaximum_Y,CellObjects|AreaShape_BoundingBoxMaximum_X,CellObjects|AreaShape_Compactness,CellObjects|AreaShape_MaximumRadius,CellObjects|AreaShape_Eccentricity,CellObjects|AreaShape_BoundingBoxMinimum_X,CellObjects|AreaShape_BoundingBoxMinimum_Y,CellObjects|AreaShape_BoundingBoxArea,CellObjects|AreaShape_ConvexArea,CellObjects|AreaShape_Area,CellObjects|AreaShape_FormFactor,CellObjects|AreaShape_MedianRadius,CellObjects|AreaShape_EquivalentDiameter,CellObjects|AreaShape_EulerNumber,CellObjects|AreaShape_MinFeretDiameter,CellObjects|AreaShape_Solidity,CellObjects|AreaShape_MeanRadius
+    Representation of Nan/Inf:NaN
+    Add a prefix to file names?:Yes
+    Filename prefix:Foxo3a_
+    Overwrite existing files without warning?:Yes
+    Data to export:NucleiObjects
+    Combine these object measurements with those of the previous object?:No
+    File name:Nuclei.csv
+    Use the object name for the file name?:No
+    Data to export:CellObjects
+    Combine these object measurements with those of the previous object?:No
+    File name:BF.csv
+    Use the object name for the file name?:No
