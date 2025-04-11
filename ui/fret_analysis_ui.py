@@ -101,8 +101,6 @@ class FRETAnalysisUI(QWidget):
         main_layout.addWidget(run_button)
 
         self.setLayout(main_layout)
-        self.setWindowTitle('FRET Analysis UI')
-        self.show()
 
     def browse_file(self):
         file_path, _ = QFileDialog.getOpenFileName(self, "选择CSV文件", "", "CSV Files (*.csv)")

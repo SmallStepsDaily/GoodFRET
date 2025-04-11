@@ -1,6 +1,6 @@
 import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QHBoxLayout, QVBoxLayout, QLabel, QListWidget, QPushButton, \
-    QFileDialog, QRadioButton, QButtonGroup, QLineEdit, QFrame
+    QFileDialog, QRadioButton, QButtonGroup, QLineEdit, QFrame, QMessageBox
 from PyQt5.QtGui import QCursor
 from PyQt5.QtCore import Qt
 
@@ -63,13 +63,13 @@ class PhenotypeAnalysisUI(QWidget):
 
         # 输出文件路径选择和运行按钮
         output_layout = QVBoxLayout()
-        output_label = QLabel("输出文件路径:")
+        output_label = QLabel("输出文件夹路径:")
         output_label.setStyleSheet("font-size: 24px;")
         # 将浏览按钮和输入框放在同一行
         path_layout = QHBoxLayout()
         self.output_path_entry = QLineEdit()
         browse_output_button = QPushButton("浏览")
-        browse_output_button.clicked.connect(self.browse_output_file)
+        browse_output_button.clicked.connect(self.browse_output_folder)
         path_layout.addWidget(self.output_path_entry)
         path_layout.addWidget(browse_output_button)
 
@@ -93,8 +93,6 @@ class PhenotypeAnalysisUI(QWidget):
         main_layout.addLayout(right_layout, 1)
 
         self.setLayout(main_layout)
-        self.setWindowTitle('Phenotype Analysis UI')
-        self.show()
 
     def add_file(self):
         file_paths, _ = QFileDialog.getOpenFileNames(self, "选择CSV文件", "", "CSV Files (*.csv)")
@@ -106,20 +104,33 @@ class PhenotypeAnalysisUI(QWidget):
         for item in selected_items:
             self.file_list_widget.takeItem(self.file_list_widget.row(item))
 
-    def browse_output_file(self):
-        file_path, _ = QFileDialog.getSaveFileName(self, "选择输出文件路径", "", "CSV Files (*.csv)")
-        if file_path:
-            self.output_path_entry.setText(file_path)
+    def browse_output_folder(self):
+        folder_path = QFileDialog.getExistingDirectory(self, "选择输出文件夹路径")
+        if folder_path:
+            self.output_path_entry.setText(folder_path)
 
     def run_analysis(self):
         file_paths = [self.file_list_widget.item(i).text() for i in range(self.file_list_widget.count())]
-        algo_choice = "LDA算法" if self.lda_radio.isChecked() else "贝叶斯网络"
         output_path = self.output_path_entry.text()
 
-        # 这里添加实际的分析代码
+        if not file_paths:
+            QMessageBox.warning(self, "警告", "请选择输入文件！")
+            return
+        if not output_path:
+            QMessageBox.warning(self, "警告", "请选择输出文件夹路径！")
+            return
 
-        result_text = f"输入文件路径: {file_paths}\n特征融合算法: {algo_choice}\n输出文件路径: {output_path}"
-        print(result_text)
+        # 获取当前被选中的按钮
+        checked_button = self.algo_button_group.checkedButton()
+        if checked_button == self.lda_radio:
+            print("执行LDA算法")
+            try:
+                from analysis.phenotype.lda import run_lda
+                run_lda(file_paths, output_path)
+            except ImportError:
+                QMessageBox.warning(self, "错误", "无法导入LDA分析模块！")
+        elif checked_button == self.pca_radio:
+            print("执行PCA算法")
 
 
 if __name__ == '__main__':
