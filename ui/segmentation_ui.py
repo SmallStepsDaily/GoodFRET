@@ -196,9 +196,38 @@ class SegmentationUI(QWidget):
             if checked_button == self.fret_radio:
                 # 执行 FRET 三通道的分割操作
                 print("执行 FRET 三通道的分割操作")
+                from segmentation.fret_seg import FRETSegmentation
+                model = FRETSegmentation(
+                    seg_diameter=int(self.cell_diameter_input.text()),
+                    seg_min_diameter=int(self.cell_min_diameter_input.text()),
+                    seg_max_diameter=int(self.cell_max_diameter_input.text()),
+                    output_redirector=output_redirector
+                )
+
+                def start_model(image_set_path, seg_model):
+                    if self.stop_event.is_set():
+                        return
+                    return seg_model.start(image_set_path)
+
+                batch = BatchProcessing(input_folder, stop_event=self.stop_event)
+                batch.start(start_model, model)  # 传递 stop_event
             elif checked_button == self.mitochondria_radio:
                 # 执行线粒体的分割操作
                 print("执行线粒体的分割操作")
+                from segmentation.mit_seg import MitSegmentation
+                model = MitSegmentation(
+                    seg_diameter=int(self.cell_diameter_input.text()),
+                    seg_min_diameter=int(self.cell_min_diameter_input.text()),
+                    seg_max_diameter=int(self.cell_max_diameter_input.text()),
+                    output_redirector=output_redirector
+                )
+                def start_model(image_set_path, seg_model):
+                    if self.stop_event.is_set():
+                        return
+                    return seg_model.start(image_set_path)
+
+                batch = BatchProcessing(input_folder, stop_event=self.stop_event)
+                batch.start(start_model, model)  # 传递 stop_event
             elif checked_button == self.nucleus_radio:
                 # 执行细胞核的分割操作
                 print("执行细胞核的分割操作")

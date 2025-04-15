@@ -1,8 +1,6 @@
 import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QHBoxLayout, QVBoxLayout, QLabel, QListWidget, QPushButton, \
     QFileDialog, QRadioButton, QButtonGroup, QLineEdit, QFrame, QMessageBox
-from PyQt5.QtGui import QCursor
-from PyQt5.QtCore import Qt
 
 
 class PhenotypeAnalysisUI(QWidget):
@@ -125,7 +123,7 @@ class PhenotypeAnalysisUI(QWidget):
         if checked_button == self.lda_radio:
             print("执行LDA算法")
             try:
-                from analysis.phenotype.lda import run_lda
+                from anaylsis.phenotype.lda import run_lda
                 run_lda(file_paths, output_path)
             except ImportError:
                 QMessageBox.warning(self, "错误", "无法导入LDA分析模块！")

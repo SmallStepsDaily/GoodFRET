@@ -143,7 +143,8 @@ class LDAClassifyModel(Model):
                 subset_data = self.df[(self.df['Metadata_hour'] == hour) & (self.df['Metadata_treatment'] == treatment)]
                 # 筛选出 Metadata_hour 相同且 Metadata_treatment 为 control 的数据
                 control_data = self.df[(self.df['Metadata_hour'] == hour) & (self.df['Metadata_treatment'] == 'control')]
-
+                if control_data.empty:
+                    control_data = self.df[self.df['Metadata_treatment'] == 'control']
                 if not subset_data.empty and not control_data.empty:
                     # 将两类数据输入到 computer 函数中
                     drug_predict_df,drug_predict_image = self.compute(subset_data, control_data, self.features_columns, treatment)
@@ -161,7 +162,7 @@ class LDAClassifyModel(Model):
                         value_df = value_df.add_prefix(f'{treatment}_')
                         result_df = pd.concat([result_df, value_df.reset_index()], axis=1)
 
-                    result_str += f'{treatment} 的 {self.ptype} 药效表征值为 {result_value}\n'
+                    result_str += f'{treatment} 在时间 {hour}h 的 {self.ptype} 药效表征值为 {result_value}\n'
         # 进行图像的分析
         boxplot_result = statistic_treatment_and_time(image_df, self.ptype)
         self.result_str = result_str
