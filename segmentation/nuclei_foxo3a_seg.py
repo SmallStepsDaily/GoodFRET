@@ -49,8 +49,8 @@ class FOXO3ANucleiSegmentation(Segmentation):
         print("分割Foxo3a和细胞核组合的细胞操作 ===================> " + str(path))
         foxo3a_mask_np, nuclei_mask_np, original_nuclei_mask_np = self.segmentation(current_image_np)
         print("保存Foxo3a和细胞核组合的细胞操作 ===================> " + str(path))
-        self.save(foxo3a_mask_np, path, 'Foxo3a_mask.jpg')
-        self.save(original_nuclei_mask_np, path, 'nmask.jpg')
+        self.save(foxo3a_mask_np, path, 'Foxo3a_mask.tif')
+        self.save(original_nuclei_mask_np, path, 'nmask.tif')
 
         # 开始计算对应的 foxo3a 的入核比例情况
         print("计算单细胞区域 foxo3a 入核情况 ===================> " + str(path))

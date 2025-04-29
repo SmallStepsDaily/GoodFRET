@@ -4,7 +4,7 @@ import warnings
 import cv2
 import numpy as np
 import tifffile as tiff
-from segmentation.seg import Segmentation, normalize_image, filter_labeled_masks_by_diameter
+from segmentation.seg import Segmentation, filter_labeled_masks_by_diameter
 from cellpose import models
 
 # 忽略特定的 UserWarning

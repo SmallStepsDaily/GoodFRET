@@ -123,7 +123,7 @@ def normalize_image(img):
     return normalized_img.astype(np.uint8)
 
 
-def filter_labeled_masks_by_diameter(mask, min_diameter=80, max_diameter=150):
+def filter_labeled_masks_by_diameter(mask, min_diameter=80, max_diameter=150, border_distance=5):
     """
     过滤不符合条件细胞：
     1. 不符合规定直径
@@ -136,19 +136,20 @@ def filter_labeled_masks_by_diameter(mask, min_diameter=80, max_diameter=150):
     # 新标签从1开始
     new_label = 1
 
+    height, width = mask.shape
+
     for prop in props:
         # 检查等效圆直径是否在指定范围内
         if not (min_diameter <= prop.equivalent_diameter <= max_diameter):
             continue
-        # 获取当前细胞的掩码
-        cell_mask = (mask == prop.label).astype(np.uint8)
-        # 检测边缘
-        edges = cv2.Canny(cell_mask, 50, 150)
-        # 霍夫变换检测直线
-        lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=50, minLineLength=50, maxLineGap=10)
-        # 如果检测到直线，认为是边缘细胞，跳过
-        if lines is not None:
+        # 获取细胞的外接矩形
+        min_row, min_col, max_row, max_col = prop.bbox
+
+        # 检查是否为边缘细胞
+        if min_row < border_distance or min_col < border_distance or \
+                max_row > height - border_distance or max_col > width - border_distance:
             continue
+
         # 将符合条件的细胞核复制到新的掩码中
         filtered_mask[mask == prop.label] = new_label
         new_label += 1

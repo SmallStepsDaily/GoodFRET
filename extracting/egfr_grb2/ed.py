@@ -4,7 +4,6 @@ import pandas as pd
 from scipy.ndimage import generate_binary_structure
 from skimage.feature import peak_local_max
 from skimage.measure import regionprops
-import torch
 
 def min_max_normalize(image, target_min=0, target_max=255):
     """
@@ -78,14 +77,22 @@ def count_single_cell_Ed(image_ed, image_rc, image_dd, mask, rc_min=0.0, rc_max=
         cell_region_ed = cell_image_ed[cell_mask]
         cell_not_zero_average_ed = cell_region_ed[cell_region_ed > 0]
         result[cell_id] = {}
-        result[cell_id]['Ed_mean_value'] = cell_region_ed.mean().item()
-        result[cell_id]['Ed_variance'] = np.var(cell_region_ed).item()
-        result[cell_id]['Ed_not_zero_mean_value'] = cell_not_zero_average_ed.mean().item()
-        result[cell_id]['Ed_not_zero_variance'] = np.var(cell_not_zero_average_ed).item()
+        if cell_region_ed.size > 0:
+            result[cell_id]['Ed_mean_value'] = cell_region_ed.mean().item()
+            result[cell_id]['Ed_variance'] = np.var(cell_region_ed).item()
+        else:
+            result[cell_id]['Ed_mean_value'] = 0
+            result[cell_id]['Ed_variance'] = 0
+        if cell_not_zero_average_ed.size > 0:
+            result[cell_id]['Ed_not_zero_mean_value'] = cell_not_zero_average_ed.mean().item()
+            result[cell_id]['Ed_not_zero_variance'] = np.var(cell_not_zero_average_ed).item()
+        else:
+            result[cell_id]['Ed_not_zero_mean_value'] = 0
+            result[cell_id]['Ed_not_zero_variance'] = 0
 
         # 计算种子点的效率值
         seed_region_ed = cell_image_ed[seeds_mask == 1]
-        if len(seed_region_ed) != 0:
+        if seed_region_ed.size > 0:
             result[cell_id]['Ed_agg_mean_value'] = seed_region_ed.mean().item()
             result[cell_id]['Ed_agg_variance'] = np.var(seed_region_ed).item()
             result[cell_id]['Ed_agg_max_value'] = seed_region_ed.max().item()

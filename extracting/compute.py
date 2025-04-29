@@ -1,5 +1,7 @@
 import importlib
 import os.path
+import sys
+
 import numpy as np
 import pandas as pd
 import torch
@@ -54,6 +56,7 @@ class FRETComputer:
                  G: float = 5.494216,
                  k: float = 0.432334,
                  expose_times: tuple = (300, 300, 300),
+                 output_redirector=sys.stdout
                  ):
         """
         :param a: 校正因子a
@@ -88,7 +91,12 @@ class FRETComputer:
         self.fret_mask = None
         self.nuclei_mask = None
 
+        # 命令行输出到文本框内
+        self.original_stdout = sys.stdout
+        sys.stdout = output_redirector
 
+    def __del__(self):
+        sys.stdout = self.original_stdout
 
     def start(self, sub_path):
         """
@@ -100,7 +108,7 @@ class FRETComputer:
         image_AA = load_image_to_tensor(os.path.join(sub_path, 'AA.tif'))
         image_DD = load_image_to_tensor(os.path.join(sub_path, 'DD.tif'))
         image_DA = load_image_to_tensor(os.path.join(sub_path, 'DA.tif'))
-        mask = load_image_to_tensor(os.path.join(sub_path, 'mmask.jpg'))
+        mask = load_image_to_tensor(os.path.join(sub_path, 'mmask.tif'), dtype=torch.uint8)
 
         # 记录数据
         self.image_DD = image_DD
@@ -127,6 +135,10 @@ class FRETComputer:
         Ed = Fc / (Fc + self.G * image_DD + 1e-7) * effective_template
         Rc = ((self.k * image_AA) / (image_DD + Fc / self.G + 1e-12)) * effective_template
 
+        # TODO 保存Ed效率图 保存为 TIFF 文件（可以选择其他格式，如 PNG），并设置保存参数以保留浮点数精度
+        tifffile.imwrite(os.path.join(self.current_sub_path, 'Ed.tif'), Ed.numpy())
+        tifffile.imwrite(os.path.join(self.current_sub_path, 'Rc.tif'), Rc.numpy())
+
         # 筛选合理的单细胞掩码图像
         image_Ed, fmask = self.filter_cell_region(Ed, mask)
         image_Rc = Rc * torch.where(fmask > 1, torch.tensor(1, device=fmask.device), fmask)
@@ -134,13 +146,10 @@ class FRETComputer:
         # 记录数据
         self.image_Ed = image_Ed
         self.image_Rc = image_Rc
+
         self.fret_mask = fmask.type(dtype=torch.uint8)
-
-        # TODO 保存Ed效率图 保存为 TIFF 文件（可以选择其他格式，如 PNG），并设置保存参数以保留浮点数精度
-        tifffile.imwrite(os.path.join(self.current_sub_path, 'Ed.tif'), image_Ed.numpy())
-        tifffile.imwrite(os.path.join(self.current_sub_path, 'Rc.tif'), image_Rc.numpy())
-        Image.fromarray(fmask.cpu().numpy().astype(np.uint8)).save(os.path.join(self.current_sub_path, 'fmask.jpg'))
-
+        # 保存为图像文件
+        tifffile.imwrite(os.path.join(self.current_sub_path, 'fmask.tif'), self.fret_mask.numpy().astype(np.uint8))
         # TODO 开始提取效率特征
         start_extraction = importlib.import_module(f'extracting.{self.fret_target_name}')
         result = start_extraction.start(self)
@@ -153,31 +162,27 @@ class FRETComputer:
         unique_labels = torch.unique(mask)
         # 排除背景标签 0
         unique_labels = unique_labels[unique_labels != 0]
-
-        filtered_mask = mask.clone()
+        filtered_mask = torch.zeros_like(mask)
+        # 重新编码过滤后的掩码，使有效区域从1开始
+        new_label = 1
         for label in unique_labels:
             label_mask = mask == label
+
             region_pixels = image_ED[label_mask]
             non_zero_count = torch.sum(region_pixels > 0)
             total_pixels = region_pixels.numel()
 
-            if non_zero_count <= total_pixels * 0.8:
+            if non_zero_count <= total_pixels * 0.3:
                 filtered_mask[label_mask] = 0
-
-        # 重新编码过滤后的掩码，使有效区域从1开始
-        new_label = 1
-        new_filtered_mask = torch.zeros_like(filtered_mask)
-        for label in unique_labels:
-            label_mask = filtered_mask == label
-            if torch.any(label_mask):
-                new_filtered_mask[label_mask] = new_label
+            else:
+                filtered_mask[label_mask] = new_label
                 new_label += 1
 
         # 直接在乘法运算中进行条件判断和赋值
-        final_result = image_ED * torch.where(new_filtered_mask > 1, torch.tensor(1, device=new_filtered_mask.device),
-                                              new_filtered_mask)
+        final_ed_result = image_ED * torch.where(filtered_mask > 1, torch.tensor(1, device=filtered_mask.device),
+                                              filtered_mask)
 
-        return final_result, new_filtered_mask
+        return final_ed_result, filtered_mask
 
 
     @staticmethod
@@ -196,7 +201,7 @@ class FRETComputer:
         return result
 
     @staticmethod
-    def subtract_background_noise(image, background_threshold=1, current_expose_times=300):
+    def subtract_background_noise(image, background_threshold=1.2, current_expose_times=300):
         background_flat = image.squeeze().flatten().numpy()
 
         # 统计直方图
@@ -206,7 +211,7 @@ class FRETComputer:
         most_frequent_index = np.argmax(hist)
 
         # 设定低峰索引上限
-        max_low_peak_index = int(most_frequent_index * 1.2)
+        max_low_peak_index = int(most_frequent_index * background_threshold)
 
         # 从最高峰之后开始寻找低峰
         low_peak_index = most_frequent_index + 1
@@ -240,15 +245,17 @@ class FRETComputer:
 
 
 if __name__ == "__main__":
-    # EGFR 参数Ed提取参数 验证批处理流程
-    def EGFR_A549_process(image_set_path, fret_model):
-        #############################
-        # EGFR-FRET分析流程
-        #############################
-        # 进行分割流程
-        return fret_model.start(image_set_path)
+    # # EGFR 参数Ed提取参数 验证批处理流程
+    # def EGFR_process(image_set_path, fret_model):
+    #     #############################
+    #     # EGFR-FRET分析流程
+    #     #############################
+    #     # 进行分割流程
+    #     return fret_model.start(image_set_path)
+    #
+    # fret = FRETComputer('egfr_grb2', expose_times=(300, 1000, 500))
+    # batch = BatchProcessing(r'D:\data\test')
+    # batch.start(EGFR_process, fret)
 
-    fret = FRETComputer('egfr_grb2', expose_times=(200, 1000, 500))
-    batch = BatchProcessing(r'D:\data\test')
-    batch.start(EGFR_A549_process, fret)
-
+    fret = FRETComputer('egfr_grb2', expose_times=(300, 1000, 500))
+    fret.start(r'D:\data\qrm\2024.12.24_A549_E_G_4H\A549-osimertinib-4h-d1-c1μm\0')

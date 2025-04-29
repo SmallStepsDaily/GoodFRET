@@ -36,7 +36,7 @@ class MitSegmentation(Segmentation):
         print("分割线粒体掩码操作 ===================> " + str(path))
         mit_mask_np = self.segmentation(mit_image_np)
         print("保存线粒体掩码操作 ===================> " + str(path))
-        self.save(mit_mask_np, path, 'mmask.jpg')
+        self.save(mit_mask_np, path, 'mmask.tif')
 
     def pretreatment(self, image):
         result_image = self.log_image(image)

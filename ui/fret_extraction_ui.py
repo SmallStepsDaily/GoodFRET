@@ -4,27 +4,14 @@ import threading
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLineEdit, QPushButton, QFileDialog, \
     QLabel, QTextEdit, QRadioButton, QButtonGroup, QGridLayout
 
-
-# 修改后的外部函数，接收 stop_event 参数
-def external_function(stop_event):
-    print("外部函数正在运行...")
-    try:
-        while not stop_event.is_set():
-            # 这里添加实际的外部函数逻辑
-            # 例如，模拟耗时操作
-            import time
-            time.sleep(1)
-            print("外部函数正在执行...")
-        print("外部函数被终止")
-    except Exception as e:
-        print(f"外部函数执行出错: {e}")
+from ui.main_ui import OutputRedirector
 
 
 class FRETExtractionUI(QWidget):
     def __init__(self):
         super().__init__()
         self.stop_event = threading.Event()
-        self.task_thread = None
+        self.running = False
         self.run_button = None
         self.stop_button = None
         self.initUI()
@@ -160,10 +147,10 @@ class FRETExtractionUI(QWidget):
         button_layout = QHBoxLayout()
         self.run_button = QPushButton("运行")
         self.run_button.setStyleSheet("background-color: green; color: white;")
-        self.run_button.clicked.connect(self.run_task)
+        self.run_button.clicked.connect(self.run)
         self.stop_button = QPushButton("终止")
         self.stop_button.setStyleSheet("background-color: red; color: white;")
-        self.stop_button.clicked.connect(self.stop_task)
+        self.stop_button.clicked.connect(self.stop)
         self.stop_button.setEnabled(False)
         button_layout.addWidget(self.run_button)
         button_layout.addWidget(self.stop_button)
@@ -187,34 +174,78 @@ class FRETExtractionUI(QWidget):
         if folder:
             self.folder_input.setText(folder)
 
-    def run_task(self):
-        if not self.task_thread or not self.task_thread.is_alive():
-            self.stop_event.clear()
-            self.run_button.setEnabled(False)
-            self.stop_button.setEnabled(True)
-            self.task_thread = threading.Thread(target=self._run_external_function)
-            self.task_thread.start()
+    def run(self):
+        if self.running:
+            return
+        self.running = True
+        self.run_button.setEnabled(False)
+        self.stop_button.setEnabled(True)
+        self.stop_event.clear()  # 清除停止事件
+        input_folder = self.folder_input.text().strip()
+        self.output_text.clear()
+        # 重定向标准输出
+        original_stdout = sys.stdout
+        output_redirector = OutputRedirector(self.output_text)
+        sys.stdout = output_redirector
 
-    def _run_external_function(self):
-        if not self.stop_event.is_set():
-            external_function(self.stop_event)
-            current_thread = threading.current_thread()
-            if current_thread != self.task_thread:
-                self.stop_task()
-            else:
-                self.stop_event.set()
-                self.run_button.setEnabled(True)
-                self.stop_button.setEnabled(False)
-                print("任务已终止")
+        self.output_text.append("输入文件路径为: " + str(input_folder))
+        self.output_text.append("开始运行==========================================>FRET特征提取程序")
 
-    def stop_task(self):
-        self.stop_event.set()
-        current_thread = threading.current_thread()
-        if self.task_thread and current_thread != self.task_thread:
-            self.task_thread.join()
+        try:
+            # 为运行操作创建一个新线程
+            threading.Thread(target=self._run_fret_extraction, args=(input_folder, output_redirector)).start()
+        except Exception as e:
+            self.output_text.append("运行出错==============================================>" + str(e))
+            self.running = False
+            self.run_button.setEnabled(True)
+            self.stop_button.setEnabled(False)
+        finally:
+            # 恢复标准输出
+            sys.stdout = original_stdout
+
+    def _run_fret_extraction(self, input_folder, output_redirector):
+        original_stdout = sys.stdout
+        sys.stdout = output_redirector
+        try:
+            target_checked_button = self.target_button_group.checkedButton()
+            feature_checked_button = self.feature_button_group.checkedButton()
+            if target_checked_button == self.target_egfr_grb2 and feature_checked_button == self.extract_single_cell:
+                from extracting.compute import FRETComputer
+                from batch.processing import BatchProcessing
+                # EGFR 参数Ed提取参数 验证批处理流程
+                def EGFR_process(image_set_path, fret_model):
+                    #############################
+                    # EGFR-FRET分析流程
+                    #############################
+                    # 进行分割流程
+                    return fret_model.start(image_set_path)
+
+                fret = FRETComputer('egfr_grb2',
+                                    rc_min=float(self.rc_min_input.text()),
+                                    rc_max=float(self.rc_max_input.text()),
+                                    ed_min=float(self.ed_min_input.text()),
+                                    ed_max=float(self.ed_max_input.text()),
+                                    expose_times=(int(self.aa_input.text()),
+                                                  int(self.dd_input.text()),
+                                                  int(self.da_input.text())),
+                                    output_redirector=output_redirector)
+                batch = BatchProcessing(input_folder, stop_event=self.stop_event)
+                batch.start(EGFR_process, fret)
+            self.output_text.append("运行完成==============================================>FRET特征提取程序")
+        except Exception as e:
+            print("运行出错==============================================>" + str(e))
+        finally:
+            self.running = False
+            self.run_button.setEnabled(True)
+            self.stop_button.setEnabled(False)
+            sys.stdout = original_stdout
+
+    def stop(self):
+        self.running = False
         self.run_button.setEnabled(True)
         self.stop_button.setEnabled(False)
-        print("任务已终止")
+        self.stop_event.set()  # 设置停止事件
+        self.output_text.append("运行已终止==============================================>")
 
 
 if __name__ == '__main__':

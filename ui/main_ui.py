@@ -34,7 +34,7 @@ class ImageProcessingUI(QMainWindow):
     def initUI(self):
         # 主窗口设置
         self.setWindowTitle('GoodFRET')
-        self.setGeometry(100, 100, 1280, 800)
+        self.setGeometry(100, 100, 1920, 1080)
         self.center()
 
         # 设置窗口图标
@@ -77,7 +77,11 @@ class ImageProcessingUI(QMainWindow):
                 layout.addWidget(fret_extraction_ui)
                 tab.setLayout(layout)
             elif actions[i] == '表型特征':
-                pass
+                from ui.phenotype_extraction_ui import PhenotypeExtractionUI
+                layout = QVBoxLayout()
+                phenotype_extraction_ui = PhenotypeExtractionUI()
+                layout.addWidget(phenotype_extraction_ui)
+                tab.setLayout(layout)
             elif actions[i] == 'FRET分析':
                 from ui.fret_analysis_ui import FRETAnalysisUI
                 layout = QVBoxLayout()
@@ -89,6 +93,18 @@ class ImageProcessingUI(QMainWindow):
                 layout = QVBoxLayout()
                 phenotype_analysis_ui = PhenotypeAnalysisUI()
                 layout.addWidget(phenotype_analysis_ui)
+                tab.setLayout(layout)
+            elif actions[i] == '药效分析':
+                from ui.drug_efficacy import DrugEfficacyAnalysisUI
+                layout = QVBoxLayout()
+                drug_efficacy_analysis_ui = DrugEfficacyAnalysisUI()
+                layout.addWidget(drug_efficacy_analysis_ui)
+                tab.setLayout(layout)
+            elif actions[i] == "帮助":
+                from ui.help_ui import HelpUI
+                layout = QVBoxLayout()
+                help_ui = HelpUI()
+                layout.addWidget(help_ui)
                 tab.setLayout(layout)
             # 其他标签页类似处理
             self.tab_widget.addTab(tab, actions[i])

@@ -2,7 +2,7 @@ import os
 import numpy as np
 import pandas as pd
 
-from extracting.compute import load_image_to_tensor, load_image_to_numpy
+from extracting.compute import load_image_to_numpy
 from extracting.egfr_grb2.ed import count_single_cell_Ed
 
 

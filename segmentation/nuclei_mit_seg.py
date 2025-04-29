@@ -46,8 +46,8 @@ class MitNucleiSegmentation(Segmentation):
         print("分割线粒体和细胞核组合的细胞操作 ===================> " + str(path))
         mit_mask_np, nuclei_mask_np = self.segmentation(current_image_np)
         print("保存线粒体和细胞核组合的细胞操作 ===================> " + str(path))
-        self.save(mit_mask_np, path, 'mmask.jpg')
-        self.save(nuclei_mask_np, path, 'nmask.jpg')
+        self.save(mit_mask_np, path, 'mmask.tif')
+        self.save(nuclei_mask_np, path, 'nmask.tif')
 
     def pretreatment(self, image):
         result_image = self.log_image(image)
