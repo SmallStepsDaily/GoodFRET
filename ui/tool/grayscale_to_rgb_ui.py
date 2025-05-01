@@ -3,7 +3,7 @@ import os
 import cv2
 import numpy as np
 from PyQt5.QtWidgets import QApplication, QWidget, QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QLineEdit, QFileDialog
-from PyQt5.QtGui import QPixmap, QImage, QDragEnterEvent, QDropEvent, QIcon
+from PyQt5.QtGui import QPixmap, QImage, QIcon
 from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot
 
 
@@ -20,6 +20,9 @@ class GrayscaleToRGBUI(QWidget):
         self.initUI()
         self.image_path = None
         self.converted_image = None
+        self.gray_image = None
+        self.width = 512
+        self.height = 512
 
     def initUI(self):
         self.setFixedSize(1280, 720)
@@ -124,27 +127,6 @@ class GrayscaleToRGBUI(QWidget):
         self.setLayout(layout)
         self.setWindowTitle('图像灰度转 RGB 工具')
 
-    def dragEnterEvent(self, event: QDragEnterEvent):
-        if event.mimeData().hasUrls():
-            event.acceptProposedAction()
-        else:
-            event.ignore()
-
-    def dropEvent(self, event: QDropEvent):
-        for url in event.mimeData().urls():
-            self.image_path = url.toLocalFile()
-            if self.image_path.lower().endswith('.tiff') or self.image_path.lower().endswith('.tif'):
-                # 读取并压缩图像
-                img = cv2.imread(self.image_path, cv2.IMREAD_GRAYSCALE)
-                img = cv2.resize(img, (512, 512))
-                height, width = img.shape
-                qImg = QImage(img.data, width, height, QImage.Format_Grayscale8)
-                pixmap = QPixmap.fromImage(qImg)
-                self.image_label.setPixmap(pixmap.scaled(self.image_label.size(), Qt.KeepAspectRatio))
-                event.acceptProposedAction()
-            else:
-                print('请拖入 TIFF 格式的图像')
-
     @pyqtSlot()
     def open_image(self):
         file_dialog = QFileDialog()
@@ -152,7 +134,9 @@ class GrayscaleToRGBUI(QWidget):
         if self.image_path:
             # 读取并压缩图像
             img = cv2.imread(self.image_path, cv2.IMREAD_GRAYSCALE)
-            img = cv2.resize(img, (512, 512))
+
+            self.gray_image = img
+
             height, width = img.shape
             qImg = QImage(img.data, width, height, QImage.Format_Grayscale8)
             pixmap = QPixmap.fromImage(qImg)
@@ -174,12 +158,23 @@ class GrayscaleToRGBUI(QWidget):
                     print('请输入有效的 RGB 值（0 - 255）')
                     return
 
-                gray_image = cv2.imread(self.image_path, cv2.IMREAD_GRAYSCALE)
-                gray_image = cv2.resize(gray_image, (512, 512))
-                colored_image = np.zeros((gray_image.shape[0], gray_image.shape[1], 3), dtype=np.uint8)
-                for y in range(gray_image.shape[0]):
-                    for x in range(gray_image.shape[1]):
-                        gray_value = gray_image[y, x]
+                # 进行log函数对数转换
+                # 为了避免对数运算中出现log(0)的情况，给图像矩阵加上一个很小的常数
+                c = 255 / np.log(1 + np.max(self.gray_image))
+                log_transformed = c * (np.log(1 + self.gray_image))
+                # 将结果转换为8位无符号整数
+                log_transformed = np.array(log_transformed, dtype=np.uint8)
+                # 计算直方图
+                hist = cv2.calcHist([log_transformed], [0], None, [256], [0, 256])
+                # 寻找直方图的谷值（假设背景像素值较低）
+                # 这里简单地取前半部分直方图的最小值对应的灰度值作为阈值
+                threshold = np.argmax(hist[:128])
+                result = log_transformed - threshold
+                result[result < 0] = 0
+                colored_image = np.zeros((result.shape[0], result.shape[1], 3), dtype=np.uint8)
+                for y in range(result.shape[0]):
+                    for x in range(result.shape[1]):
+                        gray_value = result[y, x]
                         r_value = int(gray_value * (r / 255))
                         g_value = int(gray_value * (g / 255))
                         b_value = int(gray_value * (b / 255))
