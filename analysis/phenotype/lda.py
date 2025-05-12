@@ -5,14 +5,14 @@ import seaborn as sns
 from io import BytesIO
 from PIL import Image
 from matplotlib import pyplot as plt
-from anaylsis.phenotype.loading import FileLoader
+from analysis.phenotype.loading import FileLoader
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.metrics import classification_report, roc_curve, auc
 from sklearn.preprocessing import LabelBinarizer
-from anaylsis.phenotype.model import Model
+from analysis.phenotype.model import Model
 
 
 class LDAClassifyModel(Model):

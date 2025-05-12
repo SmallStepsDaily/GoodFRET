@@ -47,10 +47,11 @@ class PhenotypeExtractionUI(QWidget):
         # 设置QLabel的位置和大小
         title_label.setGeometry(20, 20, 1000, 50)
 
-        button_texts = ["线粒体明场", "FRET 明场", "线粒体细胞核明场", "细胞核明场"]
-        button_colors = ["#FF6B6B", "#6BCB77", "#4D96FF", "#FFD93D"]
+        button_texts = ["线粒体明场", "FRET明场", "线粒体细胞核明场", "细胞核明场", "线粒体细胞核明场FRET"]
+        button_colors = ["#FF6B6B", "#6BCB77", "#4D96FF", "#FFD93D", "#F0D93D"]
         button_functions = [self.mitochondria_brightfield, self.fret_brightfield,
-                            self.mitochondria_nucleus_brightfield, self.nucleus_brightfield]
+                            self.mitochondria_nucleus_brightfield, self.nucleus_brightfield,
+                            self.mitochondria_nucleus_brightfield_FRET]
 
         for text, color, func in zip(button_texts, button_colors, button_functions):
             button = QPushButton(text)
@@ -101,13 +102,16 @@ class PhenotypeExtractionUI(QWidget):
         self.execute_file_operation('Mit_BF.cpproj', "线粒体明场")
 
     def fret_brightfield(self):
-        self.execute_file_operation('FRET_BF.cpproj', "FRET 明场")
+        self.execute_file_operation('FRET_BF.cpproj', "FRET明场")
 
     def mitochondria_nucleus_brightfield(self):
-        self.execute_file_operation('Nuclei_Mit_BF_FRET.cpproj', "线粒体细胞核明场")
+        self.execute_file_operation('Nuclei_Mit_BF.cpproj', "线粒体细胞核明场")
 
     def nucleus_brightfield(self):
         self.execute_file_operation('Foxo3a_BF.cpproj', "细胞核明场")
+
+    def mitochondria_nucleus_brightfield_FRET(self):
+        self.execute_file_operation('Nuclei_Mit_BF_FRET.cpproj', "线粒体细胞核明场FRET")
 
     def disable_buttons(self):
         for button in self.buttons:

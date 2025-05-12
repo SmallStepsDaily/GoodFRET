@@ -123,7 +123,7 @@ class PhenotypeAnalysisUI(QWidget):
         if checked_button == self.lda_radio:
             print("执行LDA算法")
             try:
-                from anaylsis.phenotype.lda import run_lda
+                from analysis.phenotype.lda import run_lda
                 run_lda(file_paths, output_path)
             except ImportError:
                 QMessageBox.warning(self, "错误", "无法导入LDA分析模块！")

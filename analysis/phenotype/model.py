@@ -15,7 +15,7 @@ class Model:
         self.df = df
         # 去除 Metadata_ 开头和 ObjectNumber 的特征列表
         self.features_columns = [col for col in df.columns if
-                                 not col.startswith('Metadata_') and col != 'ObjectNumber' and col != 'Label']
+                                 not col.startswith('Metadata_') and col != 'ObjectNumber' and col != 'Label' and col != 'ImageNumber']
 
     @staticmethod
     def merge_Texture_features(data: pd.DataFrame):

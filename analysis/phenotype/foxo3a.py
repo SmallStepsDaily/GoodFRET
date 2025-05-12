@@ -46,6 +46,6 @@ def plot_boxplot_by_treatment(df, treatment_column='Metadata_treatment', ratio_c
 
 
 if __name__ == '__main__':
-    path = r"D:\data\qrm\2025.03.03 PC9 FOXO3A 4H\foxo3a.csv"
+    path = r"C:\Code\python\csv_data\qrm\20250418\foxo3a.csv"
     df = pd.read_csv(path)
     plot_boxplot_by_treatment(df)

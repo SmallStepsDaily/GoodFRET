@@ -258,4 +258,4 @@ if __name__ == "__main__":
     # batch.start(EGFR_process, fret)
 
     fret = FRETComputer('egfr_grb2', expose_times=(300, 1000, 500))
-    fret.start(r'D:\data\qrm\2024.12.24_A549_E_G_4H\A549-osimertinib-4h-d1-c1μm\0')
+    fret.start(r'D:\data\hql\2025.04.30 fret hoechst mito BF\H1975-control-2h-d1-c0μm\11')
