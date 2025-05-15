@@ -12,6 +12,16 @@ plt.rcParams["font.family"] = ["SimHei"]
 plt.rcParams["axes.unicode_minus"] = False  # 解决负号显示问题
 plt.rcParams['figure.dpi'] = 300  # 设置图片清晰度
 
+# 自定义配色方案
+class CustomPalette:
+    CONTROL = "#E0E0E0"  # 浅灰色用于对照组
+    TREATMENTS = [
+        "#4C72B0", "#55A868", "#C44E52",
+        "#8172B2", "#CCB974", "#64B5CD",
+        "#DA8BC3", "#8C8C8C", "#CC6677",
+        "#332288", "#117733", "#88CCEE"
+    ]  # 专业配色方案
+
 
 class SD(FRETCharacterizationValue):
     def __init__(self, data_df: pd.DataFrame):
@@ -90,25 +100,31 @@ class SD(FRETCharacterizationValue):
                  times: List[float],
                  control_name: str) -> str:
         """
-        绘制不同处理组在各时间点的SD值统计箱型图，以时间为横坐标
+        绘制增强版的不同处理组在各时间点的SD值统计箱型图
 
         返回:
             - 图像的base64编码字符串
         """
-        # 设置图片清晰度
-        plt.rcParams['figure.dpi'] = 300
-
-        # 确定箱型图的位置和宽度
+        # 优化图表尺寸计算，根据时间点数量动态调整宽度
         num_treatments = len(treatments)
         num_times = len(times)
-        box_width = 0.8 / num_treatments
-        spacing = 0.2  # 时间点之间的间距
+
+        # 动态计算图表宽度，每个时间点大约占3英寸
+        fig_width = max(6, num_times * 2.5)
+        fig_height = 8
 
         # 创建画布
-        fig, ax = plt.subplots(figsize=(10 + num_times, 8))
+        fig, ax = plt.subplots(figsize=(fig_width, fig_height))
+
+
+        plt.title('标准化差异值分析', fontsize=14, color='#666', pad=10)
+
+        # 确定箱型图的位置和宽度
+        box_width = 0.8 / (num_treatments + 1)  # 调整宽度计算
+        spacing = 0.3  # 时间点之间的间距
 
         # 颜色映射
-        colors = plt.cm.tab10.colors
+        colors = CustomPalette.TREATMENTS
 
         # 用于存储所有箱型图对象，以便创建图例
         boxplot_handles = []
@@ -116,30 +132,43 @@ class SD(FRETCharacterizationValue):
 
         # 绘制箱型图
         for i, time in enumerate(times):
-            position_base = i * (num_treatments * box_width + spacing)
+            position_base = i * ((num_treatments + 1) * box_width + spacing)
 
             # 绘制对照组（每个时间点只绘制一次）
             if time in sd_control and control_name in sd_control[time]:
                 control_data = sd_control[time][control_name]
-                boxprops = dict(linestyle='-', linewidth=1.5, color='black')
-                whiskerprops = dict(linestyle='-', linewidth=1.5, color='black')
-                medianprops = dict(linestyle='-', linewidth=2.0, color='firebrick')
-                flierprops = dict(marker='o', markerfacecolor='green', markersize=8, alpha=0.5)
+
+                # 绘制带有增强视觉效果的箱型图
+                boxprops = dict(linestyle='-', linewidth=2, color='#333')
+                whiskerprops = dict(linestyle='-', linewidth=1.5, color='#333')
+                medianprops = dict(linestyle='-', linewidth=3, color='#D55E00')  # 使用对比色突出中位数
+                flierprops = dict(marker='o', markerfacecolor='#56B4E9', markersize=6, alpha=0.6)
+                meanprops = dict(marker='D', markeredgecolor='black', markerfacecolor='white', markersize=8)
 
                 bp = ax.boxplot(
                     [control_data],
                     positions=[position_base],
-                    widths=box_width,
+                    widths=box_width * 1.2,  # 对照组箱型图略宽
                     patch_artist=True,
                     boxprops=boxprops,
                     whiskerprops=whiskerprops,
                     medianprops=medianprops,
-                    flierprops=flierprops
+                    flierprops=flierprops,
+                    meanprops=meanprops,
+                    showmeans=True
                 )
 
-                # 为箱型图填充颜色
+                # 为箱型图填充颜色，添加渐变效果
                 for patch in bp['boxes']:
-                    patch.set_facecolor('lightgray')
+                    patch.set_facecolor(CustomPalette.CONTROL)
+                    patch.set_alpha(0.8)
+
+                # 添加轻微的阴影效果
+                for patch in bp['boxes']:
+                    x, y = patch.get_xy()
+                    width, height = patch.get_width(), patch.get_height()
+                    shadow = plt.Rectangle((x+2, y-2), width, height, fill=True, color='#000', alpha=0.1, zorder=0)
+                    ax.add_patch(shadow)
 
                 # 保存对照组的箱型图对象用于图例
                 if not boxplot_handles:
@@ -152,10 +181,13 @@ class SD(FRETCharacterizationValue):
 
                 if time in sd_drug and treatment in sd_drug[time]:
                     treatment_data = sd_drug[time][treatment]
-                    boxprops = dict(linestyle='-', linewidth=1.5)
+
+                    # 绘制带有增强视觉效果的箱型图
+                    boxprops = dict(linestyle='-', linewidth=2)
                     whiskerprops = dict(linestyle='-', linewidth=1.5)
-                    medianprops = dict(linestyle='-', linewidth=2.0, color='firebrick')
-                    flierprops = dict(marker='o', markerfacecolor='green', markersize=8, alpha=0.5)
+                    medianprops = dict(linestyle='-', linewidth=3, color='#D55E00')  # 使用对比色突出中位数
+                    flierprops = dict(marker='o', markerfacecolor='#56B4E9', markersize=6, alpha=0.6)
+                    meanprops = dict(marker='D', markeredgecolor='black', markerfacecolor='white', markersize=8)
 
                     bp = ax.boxplot(
                         [treatment_data],
@@ -165,13 +197,16 @@ class SD(FRETCharacterizationValue):
                         boxprops=boxprops,
                         whiskerprops=whiskerprops,
                         medianprops=medianprops,
-                        flierprops=flierprops
+                        flierprops=flierprops,
+                        meanprops=meanprops,
+                        showmeans=True
                     )
 
-                    # 为箱型图填充颜色
+                    # 为箱型图填充颜色，添加渐变效果
                     color_idx = j % len(colors)
                     for patch in bp['boxes']:
                         patch.set_facecolor(colors[color_idx])
+                        patch.set_alpha(0.8)
 
                     # 保存第一个时间点的处理组箱型图对象用于图例
                     if i == 0:
@@ -179,25 +214,45 @@ class SD(FRETCharacterizationValue):
                         legend_labels.append(treatment)
 
         # 设置x轴刻度和标签
-        x_ticks = [i * (num_treatments * box_width + spacing) + (num_treatments * box_width) / 2
+        x_ticks = [i * ((num_treatments + 1) * box_width + spacing) + ((num_treatments + 1) * box_width) / 2
                    for i in range(num_times)]
         ax.set_xticks(x_ticks)
-        ax.set_xticklabels([f"{time}h" for time in times])
+        ax.set_xticklabels([f"{time}小时" for time in times], fontsize=12)
 
         # 添加图例
-        ax.legend(boxplot_handles, legend_labels, loc='upper right')
+        legend = ax.legend(boxplot_handles, legend_labels, loc='upper right',
+                          frameon=True, fancybox=True, shadow=True,
+                          title="处理组", fontsize=11)
+        legend.get_title().set_fontsize(12)
+        legend.get_title().set_fontweight('bold')
 
         # 添加标题和标签
-        ax.set_title('不同处理组在各时间点的SD值分布', fontsize=16)
-        ax.set_xlabel('时间', fontsize=14)
-        ax.set_ylabel('标准化差异值 (SD)', fontsize=14)
+        ax.set_xlabel('时间', fontsize=14, labelpad=10)
+        ax.set_ylabel('标准化差异值 (SD)', fontsize=14, labelpad=10)
+
+        # 设置y轴范围，增加一些边距
+        y_min, y_max = ax.get_ylim()
+        margin = (y_max - y_min) * 0.1
+        ax.set_ylim(y_min - margin, y_max + margin)
 
         # 添加网格线
         ax.grid(True, axis='y', linestyle='--', alpha=0.7)
 
+        # 添加参考线
+        ax.axhline(y=0, color='r', linestyle='--', alpha=0.3, linewidth=1.5)
+
+        # 美化边框
+        for spine in ax.spines.values():
+            spine.set_color('#ccc')
+
+        # 添加数据来源注释
+        plt.figtext(0.99, 0.01, f"数据来源: 共{len(treatments)}个处理组，{num_times}个时间点",
+                   ha="right", fontsize=9, bbox={"facecolor":"white", "alpha":0.5, "pad":5})
+
         # 调整布局
         plt.tight_layout()
-        plt.show()
+        plt.subplots_adjust(top=0.9)  # 为标题留出空间
+
         # 将图像转换为base64编码
         buffer = BytesIO()
         plt.savefig(buffer, format='png', dpi=300, bbox_inches='tight')
@@ -208,7 +263,7 @@ class SD(FRETCharacterizationValue):
         image_base64 = base64.b64encode(image_png).decode('utf-8')
         plt.close()
 
-        return image_base64
+        return f'data:image/png;base64,{image_base64}'
 
 
 if __name__ == '__main__':

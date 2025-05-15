@@ -1,6 +1,8 @@
 import os
 import sys
 import warnings
+from linecache import cache
+
 import cv2
 import numpy as np
 import tifffile as tiff
@@ -36,18 +38,22 @@ class MitNucleiSegmentation(Segmentation):
         self.seg_nuclei_model = models.Cellpose(gpu=True, model_type='nuclei')
 
     def start(self, path):
-        # 读取细胞核和线粒体图像
-        mit_image_np = tiff.imread(os.path.join(path, 'Mit.tif'))
-        nuclei_image_np = tiff.imread(os.path.join(path, 'Hoechst.tif'))
-        # 将两个通道进行组合操作
-        mit_image_np = self.pretreatment(mit_image_np)
-        nuclei_image_np = self.pretreatment(nuclei_image_np)
-        current_image_np = np.stack([mit_image_np, nuclei_image_np], axis=-1)
-        print("分割线粒体和细胞核组合的细胞操作 ===================> " + str(path))
-        mit_mask_np, nuclei_mask_np = self.segmentation(current_image_np)
-        print("保存线粒体和细胞核组合的细胞操作 ===================> " + str(path))
-        self.save(mit_mask_np, path, 'mmask.tif')
-        self.save(nuclei_mask_np, path, 'nmask.tif')
+        try:
+            # 读取细胞核和线粒体图像
+            mit_image_np = tiff.imread(os.path.join(path, 'Mit.tif'))
+            nuclei_image_np = tiff.imread(os.path.join(path, 'Hoechst.tif'))
+            # 将两个通道进行组合操作
+            mit_image_np = self.pretreatment(mit_image_np)
+            nuclei_image_np = self.pretreatment(nuclei_image_np)
+            current_image_np = np.stack([mit_image_np, nuclei_image_np], axis=-1)
+            print("分割线粒体和细胞核组合的细胞操作 ===================> " + str(path))
+            mit_mask_np, nuclei_mask_np = self.segmentation(current_image_np)
+            print("保存线粒体和细胞核组合的细胞操作 ===================> " + str(path))
+            self.save(mit_mask_np, path, 'mmask.tif')
+            self.save(nuclei_mask_np, path, 'nmask.tif')
+        except RuntimeError as e:
+            print("运行错误，不存在该图像++++++++++++++++++++++++", path)
+
 
     def pretreatment(self, image):
         result_image = self.log_image(image)

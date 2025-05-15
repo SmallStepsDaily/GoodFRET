@@ -4,19 +4,24 @@ import os
 import pandas as pd
 from PyQt5.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
                              QPushButton, QFileDialog, QRadioButton, QButtonGroup, QComboBox,
-                             QTextEdit, QFrame, QMessageBox, QSplitter)
-from PyQt5.QtGui import QCursor, QPixmap, QImage
-from PyQt5.QtCore import Qt
+                             QTextEdit, QFrame, QMessageBox, QSplitter, QScrollArea, QSizePolicy)
+from PyQt5.QtGui import QCursor, QPixmap, QImage, QPalette
+from PyQt5.QtCore import Qt, QSize
 
 
 class FRETAnalysisUI(QWidget):
     def __init__(self):
         super().__init__()
+        # 选择的处理方法
+        self.dim_method = None
         self.data_df = None
         self.file_path = ''
         self.save_dir = ''
         self.current_pixmap = None
         self.current_result_str = ''
+        self.auto_fit_mode = True  # 自动适应模式
+        self.max_scale_factor = 3.0  # 最大缩放比例
+        self.scale_factor = 1.0  # 当前缩放比例
         self.initUI()
 
     def initUI(self):
@@ -52,7 +57,6 @@ class FRETAnalysisUI(QWidget):
 
         self.single_feature_radio = QRadioButton("单一特征分析")
         self.single_feature_radio.toggled.connect(self.toggle_feature_choice)
-
 
         self.feature_combobox = QComboBox()
         self.feature_combobox.setEnabled(False)
@@ -105,16 +109,41 @@ class FRETAnalysisUI(QWidget):
         self.image_frame.setStyleSheet("background-color: #f5f5f5; border-radius: 5px;")
 
         self.image_layout = QVBoxLayout()
+
+        # 图像控制按钮
+        control_layout = QHBoxLayout()
+        self.zoom_in_btn = QPushButton("放大")
+        self.zoom_out_btn = QPushButton("缩小")
+        self.auto_fit_btn = QPushButton("自适应")
+
+        self.zoom_in_btn.clicked.connect(self.zoom_in)
+        self.zoom_out_btn.clicked.connect(self.zoom_out)
+        self.auto_fit_btn.clicked.connect(self.auto_fit)
+
+        control_layout.addWidget(self.zoom_in_btn)
+        control_layout.addWidget(self.zoom_out_btn)
+        control_layout.addWidget(self.auto_fit_btn)
+
         image_label = QLabel("图像输出区域")
         image_label.setAlignment(Qt.AlignCenter)
         image_label.setStyleSheet("font-weight: bold; padding: 5px;")
+
+        self.image_layout.addLayout(control_layout)
         self.image_layout.addWidget(image_label)
+
+        # 使用QScrollArea来显示图像，支持滚动
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setBackgroundRole(QPalette.Light)
 
         # 用于显示图像的QLabel
         self.image_display = QLabel()
         self.image_display.setAlignment(Qt.AlignCenter)
         self.image_display.setStyleSheet("background-color: white; border: 1px solid #ccc; border-radius: 3px;")
-        self.image_layout.addWidget(self.image_display, 1)
+        self.image_display.setMinimumSize(100, 100)  # 设置最小尺寸
+
+        self.scroll_area.setWidget(self.image_display)
+        self.image_layout.addWidget(self.scroll_area, 1)
 
         self.image_frame.setLayout(self.image_layout)
         splitter.addWidget(self.image_frame)
@@ -269,16 +298,22 @@ class FRETAnalysisUI(QWidget):
             return
 
         try:
-            # 保存图像
-            image_path = os.path.join(self.save_dir, "概率密度.png")
-            self.current_pixmap.save(image_path, "PNG")
+            def save(image_name, csv_name):
+                # 保存图像
+                image_path = os.path.join(self.save_dir, image_name)
+                self.current_pixmap.save(image_path, "PNG")
 
-            # 保存文本结果
-            text_path = os.path.join(self.save_dir, "JS散度计算结果.txt")
-            with open(text_path, 'w', encoding='utf-8') as f:
-                f.write(self.current_result_str)
+                # 保存文本结果
+                text_path = os.path.join(self.save_dir, csv_name)
+                with open(text_path, 'w', encoding='utf-8') as f:
+                    f.write(self.current_result_str)
 
-            QMessageBox.information(self, "保存成功", f"结果已成功保存到:\n{image_path}\n{text_path}")
+                QMessageBox.information(self, "保存成功", f"结果已成功保存到:\n{image_path}\n{text_path}")
+            if self.dim_method == "标准化降维":
+                save("标准化统计.png", "SD标准化计算结果.txt")
+            elif self.dim_method == "JS散度降维":
+                save("概率密度.png", "JS散度计算结果.txt")
+
         except Exception as e:
             QMessageBox.critical(self, "保存失败", f"保存结果时发生错误: {str(e)}")
 
@@ -296,11 +331,11 @@ class FRETAnalysisUI(QWidget):
         feature_choice = "单一特征分析" if self.single_feature_radio.isChecked() else "整体特征分析"
 
         if self.standard_dim_radio.isChecked():
-            dim_method = "标准化降维"
+            self.dim_method = "标准化降维"
         elif self.js_dim_radio.isChecked():
-            dim_method = "JS散度降维"
+            self.dim_method = "JS散度降维"
         else:
-            dim_method = "绝对值降维"
+            self.dim_method = "绝对值降维"
 
         # 构建结果文本
         result_text = f"""
@@ -308,7 +343,7 @@ class FRETAnalysisUI(QWidget):
         分析参数:
         - 文件路径: {file_path}
         - 特征选择: {feature_choice}
-        - 降维方法: {dim_method}
+        - 降维方法: {self.dim_method}
 
         数据概览:
         - 样本数: {len(self.data_df)}
@@ -319,11 +354,28 @@ class FRETAnalysisUI(QWidget):
         self.text_output.setText(result_text)
 
         if self.standard_dim_radio.isChecked():
-            pass
+            from analysis.fret.standard_deviation import SD
+            sd_model = SD(self.data_df)
+            if self.single_feature_radio.isChecked():
+                selected_feature = self.feature_combobox.currentText()
+                self.text_output.append(f"正在分析特征: {selected_feature}")
+
+                try:
+                    # 传递选中的特征作为参数
+                    values, result_str, image = sd_model.start(feature_name=selected_feature)
+                    self.current_result_str = result_str
+                    self.text_output.append(result_str)
+
+                    # 更新图像显示
+                    self._display_image(image)
+                except Exception as e:
+                    self.text_output.append(f"分析过程中发生错误: {str(e)}")
+
+
         elif self.js_dim_radio.isChecked():
             from analysis.fret.js import JSDivergence  # 修正包名拼写错误
             js_model = JSDivergence(self.data_df)
-
+            # TODO 整体分析和单一特征分析
             if self.single_feature_radio.isChecked():
                 selected_feature = self.feature_combobox.currentText()
                 self.text_output.append(f"正在分析特征: {selected_feature}")
@@ -338,17 +390,8 @@ class FRETAnalysisUI(QWidget):
                     self._display_image(image)
                 except Exception as e:
                     self.text_output.append(f"分析过程中发生错误: {str(e)}")
-            else:
-                # 整体特征分析的逻辑
-                try:
-                    values, result_str, image = js_model.start()
-                    self.current_result_str = result_str
-                    self.text_output.append(result_str)
-                    self._display_image(image)
-                except Exception as e:
-                    self.text_output.append(f"分析过程中发生错误: {str(e)}")
         else:
-           pass
+            pass
 
     def _display_image(self, image):
         """显示图像并支持动态调整大小"""
@@ -389,6 +432,7 @@ class FRETAnalysisUI(QWidget):
 
             # 保存当前图像引用
             self.current_pixmap = pixmap
+            self.scale_factor = 1.0  # 重置缩放比例
 
             # 显示图像
             self._update_image_display()
@@ -399,26 +443,69 @@ class FRETAnalysisUI(QWidget):
             self.image_display.setText("显示图像失败")
 
     def _update_image_display(self):
-        """更新图像显示，调整图像大小以适应显示区域"""
-        if self.current_pixmap and not self.current_pixmap.isNull():
-            # 获取显示区域大小
-            display_size = self.image_display.size()
+        """更新图像显示，根据当前模式调整图像大小"""
+        if not self.current_pixmap or self.current_pixmap.isNull():
+            return
 
-            # 缩放图像以适应显示区域，保持宽高比
+        if self.auto_fit_mode:
+            # 自动适应模式：缩放图像以适应显示区域，但不超过原始大小
+            display_size = self.scroll_area.viewport().size()
+            original_size = self.current_pixmap.size()
+
+            # 计算适应显示区域的缩放比例
+            scale_width = min(1.0, display_size.width() / original_size.width())
+            scale_height = min(1.0, display_size.height() / original_size.height())
+            scale_factor = min(scale_width, scale_height)
+
+            # 缩放图像
             scaled_pixmap = self.current_pixmap.scaled(
-                display_size, Qt.KeepAspectRatio, Qt.SmoothTransformation
+                original_size * scale_factor,
+                Qt.KeepAspectRatio,
+                Qt.SmoothTransformation
             )
 
-            # 显示图像
             self.image_display.setPixmap(scaled_pixmap)
+            self.image_display.adjustSize()
+        else:
+            # 缩放模式：根据当前缩放因子显示图像
+            scaled_pixmap = self.current_pixmap.scaled(
+                self.current_pixmap.size() * self.scale_factor,
+                Qt.KeepAspectRatio,
+                Qt.SmoothTransformation
+            )
+            self.image_display.setPixmap(scaled_pixmap)
+            self.image_display.adjustSize()
 
     def resizeEvent(self, event):
         """处理窗口大小变化事件，更新图像显示"""
-        if self.current_pixmap and not self.current_pixmap.isNull():
+        if self.current_pixmap and not self.current_pixmap.isNull() and self.auto_fit_mode:
             self._update_image_display()
 
         # 调用基类的resizeEvent方法
         super(FRETAnalysisUI, self).resizeEvent(event)
+
+    def zoom_in(self):
+        """放大图像"""
+        if not self.current_pixmap or self.current_pixmap.isNull():
+            return
+
+        self.auto_fit_mode = False
+        self.scale_factor = min(self.scale_factor * 1.2, self.max_scale_factor)
+        self._update_image_display()
+
+    def zoom_out(self):
+        """缩小图像"""
+        if not self.current_pixmap or self.current_pixmap.isNull():
+            return
+
+        self.auto_fit_mode = False
+        self.scale_factor = max(self.scale_factor / 1.2, 0.1)
+        self._update_image_display()
+
+    def auto_fit(self):
+        """自动适应图像大小"""
+        self.auto_fit_mode = True
+        self._update_image_display()
 
 
 if __name__ == '__main__':
