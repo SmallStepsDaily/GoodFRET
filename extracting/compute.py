@@ -91,6 +91,9 @@ class FRETComputer:
         self.fret_mask = None
         self.nuclei_mask = None
 
+        # 判断是否需要根据亚细胞器进行FRET特征提取
+        self.extract_organelle = True
+
         # 命令行输出到文本框内
         self.original_stdout = sys.stdout
         sys.stdout = output_redirector
@@ -108,7 +111,17 @@ class FRETComputer:
         image_AA = load_image_to_tensor(os.path.join(sub_path, 'AA.tif'))
         image_DD = load_image_to_tensor(os.path.join(sub_path, 'DD.tif'))
         image_DA = load_image_to_tensor(os.path.join(sub_path, 'DA.tif'))
-        mask = load_image_to_tensor(os.path.join(sub_path, 'mmask.tif'), dtype=torch.uint8)
+
+        mask = None
+        # 在这里需要判断，掩码是基于亚细胞器染料通道的分割掩码还是基于FRET三通道的掩码
+        if os.path.exists(os.path.join(sub_path, 'mmask.tif')):
+            # 基于亚细胞器染料通道的分割掩码
+            mask = load_image_to_tensor(os.path.join(sub_path, 'mmask.tif'), dtype=torch.uint8)
+            self.extract_organelle = True
+        elif os.path.exists(os.path.join(sub_path, 'fret_mask.tif')):
+            # 基于FRET三通道的掩码
+            mask = load_image_to_tensor(os.path.join(sub_path, 'fret_mask.tif'), dtype=torch.uint8)
+            self.extract_organelle = False
 
         # 记录数据
         self.image_DD = image_DD
@@ -257,5 +270,5 @@ if __name__ == "__main__":
     # batch = BatchProcessing(r'D:\data\test')
     # batch.start(EGFR_process, fret)
 
-    fret = FRETComputer('egfr_grb2', expose_times=(300, 1000, 500))
-    fret.start(r'D:\data\hql\2025.04.30 fret hoechst mito BF\H1975-control-2h-d1-c0μm\11')
+    fret = FRETComputer('egfr_grb2', expose_times=(300, 300, 300))
+    fret.start(r'D:\data\20250412\BCL2-BAK\MCF7-control-2h-d3-c0μm\7')

@@ -49,6 +49,7 @@ class Segmentation:
         # 保存为图像文件
         tifffile.imwrite(str(os.path.join(output_path, image_name)), image_np.astype(dtype))
 
+
     @staticmethod
     def log_image(image_np):
         # 定义一个极小的正数，避免对数运算时出现趋近于 0 的情况
@@ -94,7 +95,7 @@ class Segmentation:
         return common_mit_mask, common_nuclei_mask
 
     @staticmethod
-    def show(self, image_np):
+    def show(image_np):
         """
                     输出图像为窗口形式
                     """

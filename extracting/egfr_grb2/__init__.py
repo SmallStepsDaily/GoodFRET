@@ -31,18 +31,20 @@ def start(fret):
 
     需要判断是否存在细胞核图像，决定是否掩码细胞核提取特征
     """
-    nuclei_mask, mit_mask = None, None
-    if os.path.exists(os.path.join(fret.current_sub_path, 'nmask.tif')):
+    cell_ed_df = count_single_cell_Ed(fret.image_Ed.numpy(), fret.image_Rc.numpy(), fret.image_DD.numpy(),
+                                      fret.fret_mask.numpy())
+    cell_ed_df = cell_ed_df.add_prefix('Cell_')
+    if fret.extract_organelle and os.path.exists(os.path.join(fret.current_sub_path, 'nmask.tif')):
         nuclei_mask = load_image_to_numpy(os.path.join(fret.current_sub_path, 'nmask.tif'), dtype=np.uint8)
         nuclei_mask, mit_mask = process_masks(fret.fret_mask.numpy(), nuclei_mask)
-
-    cell_ed_df = count_single_cell_Ed(fret.image_Ed.numpy(), fret.image_Rc.numpy(), fret.image_DD.numpy(), fret.fret_mask.numpy())
-    cell_ed_df = cell_ed_df.add_prefix('Cell_')
-    nuclei_ed_df = count_single_cell_Ed(fret.image_Ed.numpy(), fret.image_Rc.numpy(), fret.image_DD.numpy(), nuclei_mask)
-    nuclei_ed_df = nuclei_ed_df.add_prefix("Nuclei_")
-    mit_ed_df = count_single_cell_Ed(fret.image_Ed.numpy(), fret.image_Rc.numpy(), fret.image_DD.numpy(), mit_mask)
-    mit_ed_df = mit_ed_df.add_prefix("Mit_")
-    merged_df = pd.concat([cell_ed_df, nuclei_ed_df, mit_ed_df], axis=1)
+        nuclei_ed_df = count_single_cell_Ed(fret.image_Ed.numpy(), fret.image_Rc.numpy(), fret.image_DD.numpy(), nuclei_mask)
+        nuclei_ed_df = nuclei_ed_df.add_prefix("Nuclei_")
+        mit_ed_df = count_single_cell_Ed(fret.image_Ed.numpy(), fret.image_Rc.numpy(), fret.image_DD.numpy(), mit_mask)
+        mit_ed_df = mit_ed_df.add_prefix("Mit_")
+        merged_df = pd.concat([cell_ed_df, nuclei_ed_df, mit_ed_df], axis=1)
+        merged_df['ObjectNumber'] = merged_df.index
+    else:
+        merged_df = cell_ed_df
     merged_df['ObjectNumber'] = merged_df.index
     return merged_df
 

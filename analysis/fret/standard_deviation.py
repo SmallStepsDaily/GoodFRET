@@ -5,6 +5,8 @@ import base64
 from io import BytesIO
 from typing import Dict, List, Tuple, Optional
 
+from sympy.stats.sampling.sample_numpy import numpy
+
 from analysis.fret import FRETCharacterizationValue
 
 # 设置中文字体支持
@@ -42,10 +44,13 @@ class SD(FRETCharacterizationValue):
 
         # 首先计算control在各时间点的分布
         controls_data = {}
+        init_control = None
         for time in times:
             time_data = controls[controls['Metadata_hour'] == time]
             control_feature = time_data[feature_name].values[time_data[feature_name] > 0]
             controls_data[time] = control_feature
+            if init_control is None and len(control_feature) > 0:
+                init_control = control_feature
 
         # 标准化表征值
         self.all_sd_values = {}
@@ -55,13 +60,14 @@ class SD(FRETCharacterizationValue):
         for time in times:
             data = self.data[self.data['Metadata_hour'] == time]
             control = controls_data[time]  # 使用对应时间点的control分布
+            if len(control) == 0:
+                control = init_control
             sd_values = {}
             sd_drug[time] = {}
             sd_control[time] = {}
             for treatment in treatments:
                 treatment_data = data[data['Metadata_treatment'] == treatment]
                 drug = treatment_data[feature_name].values[treatment_data[feature_name] > 0]
-
                 if len(drug) == 0:
                     print(f"警告: 处理组 '{treatment}' 在时间点 {time} 没有有效数据")
                     continue
@@ -116,7 +122,6 @@ class SD(FRETCharacterizationValue):
         # 创建画布
         fig, ax = plt.subplots(figsize=(fig_width, fig_height))
 
-
         plt.title('标准化差异值分析', fontsize=14, color='#666', pad=10)
 
         # 确定箱型图的位置和宽度
@@ -138,15 +143,18 @@ class SD(FRETCharacterizationValue):
             if time in sd_control and control_name in sd_control[time]:
                 control_data = sd_control[time][control_name]
 
-                # 绘制带有增强视觉效果的箱型图
+                # 过滤超出[-2, 2]范围的数据点
+                filtered_control = np.clip(control_data, -2, 2)
+
+                # 绘制带有增强视觉效果的箱型图（不显示异常值）
                 boxprops = dict(linestyle='-', linewidth=2, color='#333')
                 whiskerprops = dict(linestyle='-', linewidth=1.5, color='#333')
-                medianprops = dict(linestyle='-', linewidth=3, color='#D55E00')  # 使用对比色突出中位数
-                flierprops = dict(marker='o', markerfacecolor='#56B4E9', markersize=6, alpha=0.6)
+                medianprops = dict(linestyle='-', linewidth=3, color='#D55E00')
+                flierprops = dict(marker='None')  # 不显示异常值
                 meanprops = dict(marker='D', markeredgecolor='black', markerfacecolor='white', markersize=8)
 
                 bp = ax.boxplot(
-                    [control_data],
+                    [filtered_control],
                     positions=[position_base],
                     widths=box_width * 1.2,  # 对照组箱型图略宽
                     patch_artist=True,
@@ -167,7 +175,7 @@ class SD(FRETCharacterizationValue):
                 for patch in bp['boxes']:
                     x, y = patch.get_xy()
                     width, height = patch.get_width(), patch.get_height()
-                    shadow = plt.Rectangle((x+2, y-2), width, height, fill=True, color='#000', alpha=0.1, zorder=0)
+                    shadow = plt.Rectangle((x + 2, y - 2), width, height, fill=True, color='#000', alpha=0.1, zorder=0)
                     ax.add_patch(shadow)
 
                 # 保存对照组的箱型图对象用于图例
@@ -182,15 +190,18 @@ class SD(FRETCharacterizationValue):
                 if time in sd_drug and treatment in sd_drug[time]:
                     treatment_data = sd_drug[time][treatment]
 
-                    # 绘制带有增强视觉效果的箱型图
+                    # 过滤超出[-2, 2]范围的数据点
+                    filtered_treatment = np.clip(treatment_data, -2, 2)
+
+                    # 绘制带有增强视觉效果的箱型图（不显示异常值）
                     boxprops = dict(linestyle='-', linewidth=2)
                     whiskerprops = dict(linestyle='-', linewidth=1.5)
-                    medianprops = dict(linestyle='-', linewidth=3, color='#D55E00')  # 使用对比色突出中位数
-                    flierprops = dict(marker='o', markerfacecolor='#56B4E9', markersize=6, alpha=0.6)
+                    medianprops = dict(linestyle='-', linewidth=3, color='#D55E00')
+                    flierprops = dict(marker='None')  # 不显示异常值
                     meanprops = dict(marker='D', markeredgecolor='black', markerfacecolor='white', markersize=8)
 
                     bp = ax.boxplot(
-                        [treatment_data],
+                        [filtered_treatment],
                         positions=[position],
                         widths=box_width,
                         patch_artist=True,
@@ -221,8 +232,8 @@ class SD(FRETCharacterizationValue):
 
         # 添加图例
         legend = ax.legend(boxplot_handles, legend_labels, loc='upper right',
-                          frameon=True, fancybox=True, shadow=True,
-                          title="处理组", fontsize=11)
+                           frameon=True, fancybox=True, shadow=True,
+                           title="处理组", fontsize=11)
         legend.get_title().set_fontsize(12)
         legend.get_title().set_fontweight('bold')
 
@@ -230,16 +241,16 @@ class SD(FRETCharacterizationValue):
         ax.set_xlabel('时间', fontsize=14, labelpad=10)
         ax.set_ylabel('标准化差异值 (SD)', fontsize=14, labelpad=10)
 
-        # 设置y轴范围，增加一些边距
-        y_min, y_max = ax.get_ylim()
-        margin = (y_max - y_min) * 0.1
-        ax.set_ylim(y_min - margin, y_max + margin)
+        # 固定y轴范围为-2到2
+        ax.set_ylim(-2, 2)
 
         # 添加网格线
         ax.grid(True, axis='y', linestyle='--', alpha=0.7)
 
         # 添加参考线
         ax.axhline(y=0, color='r', linestyle='--', alpha=0.3, linewidth=1.5)
+        ax.axhline(y=-2, color='g', linestyle=':', alpha=0.3, linewidth=1)
+        ax.axhline(y=2, color='g', linestyle=':', alpha=0.3, linewidth=1)
 
         # 美化边框
         for spine in ax.spines.values():
@@ -247,7 +258,11 @@ class SD(FRETCharacterizationValue):
 
         # 添加数据来源注释
         plt.figtext(0.99, 0.01, f"数据来源: 共{len(treatments)}个处理组，{num_times}个时间点",
-                   ha="right", fontsize=9, bbox={"facecolor":"white", "alpha":0.5, "pad":5})
+                    ha="right", fontsize=9, bbox={"facecolor": "white", "alpha": 0.5, "pad": 5})
+
+        # 添加范围说明
+        plt.figtext(0.01, 0.01, "注: 超出[-2, 2]范围的数据已被截断",
+                    ha="left", fontsize=9, bbox={"facecolor": "white", "alpha": 0.5, "pad": 3})
 
         # 调整布局
         plt.tight_layout()
@@ -267,7 +282,7 @@ class SD(FRETCharacterizationValue):
 
 
 if __name__ == '__main__':
-    data_df = pd.read_csv(r'D:\data\hql\2025.04.30 fret hoechst mito BF\FRET.csv')
+    data_df = pd.read_csv(r'C:\Code\python\csv_data\gl\20250412\FRET.csv')
     sd_model = SD(data_df)
-    values, result_str, image = sd_model.start(feature_name='Mit_Ed_agg_top_50_value')
+    values, result_str, image = sd_model.start(feature_name='Cell_Ed_agg_top_50_value')
     print(result_str)

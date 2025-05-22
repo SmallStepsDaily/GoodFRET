@@ -40,9 +40,15 @@ class JSDivergence(FRETCharacterizationValue):
 
         # 首先计算control在各时间点的分布
         control_pdfs = {}
+        init_control = None
         for time in times:
             # 关键修改：先筛选对应时间点的数据
             time_data = control_data[control_data['Metadata_hour'] == time]
+            if len(time_data) == 0:
+                time_data = init_control
+            else:
+                if init_control is None:
+                    init_control = time_data
             control_feature = time_data[feature_name].values[time_data[feature_name] > 0]
             pdf_control = self._compute_pdf(control_feature, x_range)
             control_pdfs[time] = pdf_control
@@ -175,7 +181,7 @@ class JSDivergence(FRETCharacterizationValue):
         return f'data:image/png;base64,{image_data}'
 
 if __name__ == '__main__':
-    data_df = pd.read_csv(r'D:\data\hql\2025.04.30 fret hoechst mito BF\FRET.csv')
+    data_df = pd.read_csv(r'C:\Code\python\csv_data\gl\20250412\FRET.csv')
     jd_model = JSDivergence(data_df)
-    values, result_str, image = jd_model.start(feature_name='Mit_Ed_agg_top_50_value')
+    values, result_str, image = jd_model.start(feature_name='Cell_Ed_agg_top_50_value')
     print(result_str)
