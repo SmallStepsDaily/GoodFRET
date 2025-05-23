@@ -42,7 +42,7 @@ class JSDivergence(FRETCharacterizationValue):
         control_pdfs = {}
         init_control = None
         for time in times:
-            # 关键修改：先筛选对应时间点的数据
+            #             # 关键修改：先筛选对应时间点的数据
             time_data = control_data[control_data['Metadata_hour'] == time]
             if len(time_data) == 0:
                 time_data = init_control
@@ -59,7 +59,7 @@ class JSDivergence(FRETCharacterizationValue):
             pdf_control = control_pdfs[time]  # 使用对应时间点的control分布
 
             js_values = {}
-
+            # TODO 浓度添加
             for treatment in treatments:
                 treatment_data = data[data['Metadata_treatment'] == treatment]
                 treatment_feature = treatment_data[feature_name].values[treatment_data[feature_name] > 0]

@@ -77,5 +77,5 @@ def gaolu_function(df):
     return result_str
 
 if __name__ == "__main__":
-    data = pd.read_csv(r"C:\Code\python\csv_data\hql\20250430\药效评估\药物评价.csv", encoding='GBK')
+    data = pd.read_csv(r"C:\Code\python\csv_data\gl\20250412\BCL2-BAK\药效评估\药物评价.csv", encoding='GBK')
     print(gaolu_function(data))

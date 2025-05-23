@@ -41,7 +41,7 @@ NamesAndTypes:[module_num:3|svn_version:'Unknown'|variable_revision_number:8|sho
     Relative pixel spacing in X:1.0
     Relative pixel spacing in Y:1.0
     Relative pixel spacing in Z:1.0
-    Select the rule criteria:and (file does contain "fmask.jpg")
+    Select the rule criteria:and (file does contain "fmask.tif")
     Name to assign these images:fmask
     Name to assign these objects:Cell
     Select the image type:Objects

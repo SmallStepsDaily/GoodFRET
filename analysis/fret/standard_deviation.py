@@ -56,6 +56,7 @@ class SD(FRETCharacterizationValue):
         self.all_sd_values = {}
         sd_drug = {}
         sd_control = {}
+        treatment_list = []
         # 计算各处理组在各时间点的分布及SD值
         for time in times:
             data = self.data[self.data['Metadata_hour'] == time]
@@ -67,21 +68,37 @@ class SD(FRETCharacterizationValue):
             sd_control[time] = {}
             for treatment in treatments:
                 treatment_data = data[data['Metadata_treatment'] == treatment]
-                drug = treatment_data[feature_name].values[treatment_data[feature_name] > 0]
-                if len(drug) == 0:
+                if len(treatment_data) == 0:
                     print(f"警告: 处理组 '{treatment}' 在时间点 {time} 没有有效数据")
                     continue
-
-                # 使用{time}-{treatment}作为键
-                key = f"{time}h-{treatment}"
-                E_value, sd_drug[time][treatment], sd_control[time][treatment] = self.compute(control, drug)
-                sd_values[key] = E_value
-                # 更新结果文本
-                self.result += f"{str(time)}h-{control_name} vs {key}: SD值 = {E_value:.4f}\n"
+                # 划分浓度的情况，查看数据下的不同浓度情况
+                concentrations = pd.unique(treatment_data['Metadata_concentration'])
+                if len(concentrations) > 1:
+                    sd_drug[time][treatment] = {}
+                    sd_control[time][treatment] = {}
+                    for concentration in concentrations:
+                        key = f"{time}h-{treatment}-{concentration}μm"
+                        drug = treatment_data[treatment_data['Metadata_concentration'] == concentration][feature_name].values
+                        E_value, sd_drug[time][f'{treatment}-{concentration}μm'], sd_control[time][f'{treatment}-{concentration}μm'] = self.compute(control, drug)
+                        treatment_list.append(f'{treatment}-{concentration}μm')
+                        sd_values[key] = E_value
+                        # 更新结果文本
+                        self.result += f"{str(time)}h-{control_name} vs {key}: SD值 = {E_value:.4f}\n"
+                # 如果没有浓度梯度的情况进行统计
+                else:
+                    drug = treatment_data[feature_name].values[treatment_data[feature_name] > 0]
+                    # 使用{time}-{treatment}作为键
+                    key = f"{time}h-{treatment}"
+                    E_value, sd_drug[time][treatment], sd_control[time][treatment] = self.compute(control, drug)
+                    treatment_list.append(treatment)
+                    sd_values[key] = E_value
+                    # 更新结果文本
+                    self.result += f"{str(time)}h-{control_name} vs {key}: SD值 = {E_value:.4f}\n"
             self.all_sd_values[time] = sd_values
 
         # 生成统计箱型图
-        self.plot = self.draw_plt(sd_drug, sd_control, treatments, times, control_name)
+        # TODO 缺少浓度的输入情况
+        self.plot = self.draw_plt(sd_drug, sd_control, treatment_list, times, control_name)
 
         return self.all_sd_values, self.result, self.plot
 
@@ -142,7 +159,8 @@ class SD(FRETCharacterizationValue):
             # 绘制对照组（每个时间点只绘制一次）
             if time in sd_control and control_name in sd_control[time]:
                 control_data = sd_control[time][control_name]
-
+                if len(control_data) == 0:
+                    break
                 # 过滤超出[-2, 2]范围的数据点
                 filtered_control = np.clip(control_data, -2, 2)
 
@@ -282,7 +300,7 @@ class SD(FRETCharacterizationValue):
 
 
 if __name__ == '__main__':
-    data_df = pd.read_csv(r'C:\Code\python\csv_data\gl\20250412\FRET.csv')
+    data_df = pd.read_csv(r"C:\Code\python\csv_data\gl\20250509\20250412-20250513对照组FRET.csv")
     sd_model = SD(data_df)
     values, result_str, image = sd_model.start(feature_name='Cell_Ed_agg_top_50_value')
     print(result_str)

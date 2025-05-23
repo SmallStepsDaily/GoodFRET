@@ -139,6 +139,8 @@ class LDAClassifyModel(Model):
         image_df = pd.DataFrame()
         for hour in unique_hours:
             for treatment in unique_treatments:
+                # 定义浓度结果存储pd
+                concentrations_image_df = pd.DataFrame()
                 # 筛选出当前 Metadata_hour 和 Metadata_treatment 的数据
                 subset_data = self.df[(self.df['Metadata_hour'] == hour) & (self.df['Metadata_treatment'] == treatment)]
                 # 筛选出 Metadata_hour 相同且 Metadata_treatment 为 control 的数据
@@ -146,24 +148,34 @@ class LDAClassifyModel(Model):
                 if control_data.empty:
                     control_data = self.df[self.df['Metadata_treatment'] == 'control']
                 if not subset_data.empty and not control_data.empty:
-                    # 将两类数据输入到 computer 函数中
-                    drug_predict_df,drug_predict_image = self.compute(subset_data, control_data, self.features_columns, treatment)
+                    # 遍历浓度进行计算
+                    concentrations = pd.unique(subset_data['Metadata_concentration'])
+                    for concentration in concentrations:
+                        concentration_subset_data = subset_data[subset_data['Metadata_concentration'] == concentration]
+                        treatment_name = f'{treatment}_{concentration}μm_'
+                        # 将两类数据输入到 computer 函数中
+                        drug_predict_df,drug_predict_image = self.compute(concentration_subset_data, control_data, self.features_columns, treatment)
+                        value_df, result_value = self.compute_phenotypic_value(drug_predict_df, treatment)
+                        value_df['Metadata_hour'] = hour
 
-                    value_df, result_value = self.compute_phenotypic_value(drug_predict_df, treatment)
-                    value_df['Metadata_hour'] = hour
-                    # 横向拼接 DataFrame
-                    if result_df.empty:
-                        image_df = value_df
-                        value_df = value_df.add_prefix(f'{treatment}_')
-                        result_df = value_df.reset_index()
-                    else:
-                        image_df = pd.concat([image_df, value_df], axis=0)
-                        # 为列名添加前缀
-                        value_df = value_df.add_prefix(f'{treatment}_')
-                        result_df = pd.concat([result_df, value_df.reset_index()], axis=1)
+                        # 横向拼接 DataFrame
+                        if result_df.empty:
+                            concentrations_image_df = value_df
+                            # 为列名添加前缀
+                            value_df = value_df.add_prefix(treatment_name)
+                            result_df = value_df.reset_index()
+                        else:
+                            concentrations_image_df = pd.concat([concentrations_image_df, value_df], axis=0)
+                            # 为列名添加前缀
+                            value_df = value_df.add_prefix(treatment_name)
+                            result_df = pd.concat([result_df, value_df.reset_index()], axis=1)
 
-                    result_str += f'{treatment} 在时间 {hour}h 的 {self.ptype} 药效表征值为 {result_value}\n'
-        # 进行图像的分析
+                        concentrations_image_df['Metadata_treatment'] = concentrations_image_df['Metadata_treatment'].mask(
+                            concentrations_image_df['Metadata_treatment'] == treatment,
+                            concentrations_image_df['Metadata_treatment'] + f'_{concentration}μm'
+                        )
+                        result_str += f'{treatment} 在时间 {hour}h 和浓度 {concentration}μm 的 {self.ptype} 药效表征值为 {result_value}\n'
+                image_df = pd.concat([image_df, concentrations_image_df.reset_index()], axis=0)
         boxplot_result = statistic_treatment_and_time(image_df, self.ptype)
         self.result_str = result_str
         self.result_df = result_df
@@ -180,7 +192,6 @@ def statistic_treatment_and_time(df, feature_type):
     """
     # 设置绘图风格
     sns.set(style="whitegrid")
-
     # 重新排序 Metadata_treatment 列，将 control 放在最前面
     treatment_order = ['control'] + [val for val in df['Metadata_treatment'].unique() if val != 'control']
     df['Metadata_treatment'] = pd.Categorical(df['Metadata_treatment'], categories=treatment_order, ordered=True)
@@ -201,7 +212,7 @@ def statistic_treatment_and_time(df, feature_type):
     ax.set_ylabel('Phenotypic Value')
 
     # 规范图例标题
-    plt.legend(title='Treatment', bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0.)
+    plt.legend(title='Treatment', bbox_to_anchor=(1.01, 1), loc='upper left', borderaxespad=0.)
 
     # 调整布局以防止重叠
     plt.tight_layout()
@@ -252,5 +263,5 @@ def run_lda(file_paths, save_path):
 
 
 if __name__ == '__main__':
-    paths = [r"C:\Code\python\csv_data\qrm\20250319_PC9_FOXO3A_4h\表型表征值\Foxo3a_BF.csv", r"C:\Code\python\csv_data\qrm\20250319_PC9_FOXO3A_4h\表型表征值\Foxo3a_Nuclei.csv"]
+    paths = [r"C:\Code\python\csv_data\gl\20250513\FB_BF.csv"]
     run_lda(paths, 'C:/Users/pengs/Downloads')
