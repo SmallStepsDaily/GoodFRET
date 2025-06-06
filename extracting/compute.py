@@ -1,14 +1,10 @@
 import importlib
 import os.path
 import sys
-
 import numpy as np
-import pandas as pd
 import torch
 from PIL import Image
 from tifffile import tifffile
-
-from batch.processing import BatchProcessing
 
 """
 FRET 效率计算函数
@@ -91,6 +87,9 @@ class FRETComputer:
         self.fret_mask = None
         self.nuclei_mask = None
 
+        # 统计三通道的背景阈值
+        self.background_noise_values = {}
+
         # 判断是否需要根据亚细胞器进行FRET特征提取
         self.extract_organelle = True
 
@@ -130,15 +129,12 @@ class FRETComputer:
         self.mask = mask
 
         # 计算背景噪声 并且FRET三通道减去对应的背景噪声
-        image_AA, image_AA_template = self.subtract_background_noise(image_AA, current_expose_times=self.expose_times[0])
-        image_DD, image_DD_template = self.subtract_background_noise(image_DD, current_expose_times=self.expose_times[1])
-        image_DA, image_DA_template = self.subtract_background_noise(image_DA, current_expose_times=self.expose_times[2])
-
-        # 筛选存在过曝的情况
-        overexpose_mask = self.filter_overexpose(image_AA, image_DD)
+        image_AA, image_AA_template, self.background_noise_values['AA'] = self.subtract_background_noise(image_AA, current_expose_times=self.expose_times[0])
+        image_DD, image_DD_template, self.background_noise_values['DD'] = self.subtract_background_noise(image_DD, current_expose_times=self.expose_times[1])
+        image_DA, image_DA_template, self.background_noise_values['DA'] = self.subtract_background_noise(image_DA, current_expose_times=self.expose_times[2])
 
         # 添加三通道有效模板 三通道值全部必须为正
-        effective_template = image_AA_template * image_DD_template * image_DA_template * overexpose_mask
+        effective_template = image_AA_template * image_DD_template * image_DA_template
 
         # 计算 Fc 图像
         Fc = image_DA - self.a * (image_AA - self.c * image_DD) - self.d * (image_DD - self.b * image_AA)
@@ -161,7 +157,7 @@ class FRETComputer:
         self.image_Rc = image_Rc
 
         self.fret_mask = fmask.type(dtype=torch.uint8)
-        # 保存为图像文件
+        # 保存为图像文件 TODO
         tifffile.imwrite(os.path.join(self.current_sub_path, 'fmask.tif'), self.fret_mask.numpy().astype(np.uint8))
         # TODO 开始提取效率特征
         start_extraction = importlib.import_module(f'extracting.{self.fret_target_name}')
@@ -201,6 +197,7 @@ class FRETComputer:
     @staticmethod
     def filter_overexpose(image_AA, image_DD):
         """
+        被弃用，放在后面流程上进行处理
         筛选过曝的细胞
         1. AA荧光强度大于DD通道十倍设置为0
         """
@@ -254,21 +251,15 @@ class FRETComputer:
         noise_removed_tensor = noise_removed_tensor / current_expose_times
 
         # 返回降噪结果
-        return noise_removed_tensor, template_tensor
+        return noise_removed_tensor, template_tensor, background_noise / current_expose_times
 
 
 if __name__ == "__main__":
-    # # EGFR 参数Ed提取参数 验证批处理流程
-    # def EGFR_process(image_set_path, fret_model):
-    #     #############################
-    #     # EGFR-FRET分析流程
-    #     #############################
-    #     # 进行分割流程
-    #     return fret_model.start(image_set_path)
-    #
-    # fret = FRETComputer('egfr_grb2', expose_times=(300, 1000, 500))
-    # batch = BatchProcessing(r'D:\data\test')
-    # batch.start(EGFR_process, fret)
-
-    fret = FRETComputer('egfr_grb2', expose_times=(300, 300, 300))
-    fret.start(r'D:\data\20250412\BCL2-BAK\MCF7-control-2h-d3-c0μm\7')
+    # EGFR 靶点验证
+    # fret = FRETComputer('egfr_grb2', expose_times=(300, 300, 300))
+    # fret.start(r'D:\data\hql\2025.04.30 fret hoechst mito BF\H1975-control-2h-d1-c0μm\21')
+    # BAX 靶点验证
+    fret = FRETComputer('bax_bak', expose_times=(300, 300, 300))
+    # D:\data\20250412\BCLXL-BAK\MCF7-A133-2h-d1-c60μm\6
+    # D:\data\20250412\BCLXL-BAK\MCF7-control-2h-d3-c0μm\4
+    fret.start(r'D:\data\20250412\BCLXL-BAK\MCF7-A133-2h-d1-c60μm\6')

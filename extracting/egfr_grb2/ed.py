@@ -1,60 +1,64 @@
 import cv2
 import numpy as np
 import pandas as pd
+from scipy import ndimage
 from scipy.ndimage import generate_binary_structure
 from skimage.feature import peak_local_max
 from skimage.measure import regionprops
+from tool.image import show_gray_image
+
 
 def min_max_normalize(image, target_min=0, target_max=255):
     """
-    对输入图像进行Min-Max归一化
+    仅对单细胞区域（像素值>0）进行Min-Max归一化，保持背景（像素值=0）不变
 
     :param image: 输入的图像数组，形状为 (C, H, W) 或 (H, W)
     :param target_min: 目标范围的最小值，默认为0
     :param target_max: 目标范围的最大值，默认为255
     :return: 归一化后的图像数组，类型为uint8
     """
-    min_val = np.min(image)
-    max_val = np.max(image)
-    denominator = max_val - min_val
-    denominator = np.where(denominator == 0, 1e-8, denominator)
-    normalized_image = (image - min_val) / denominator
-    normalized_image = target_min + (target_max - target_min) * normalized_image
-    normalized_image = np.clip(normalized_image, 0, 255).astype(np.uint8)
+    # 创建输出数组的副本，保留原始背景
+    normalized_image = image.copy()
+
+    # 仅处理单细胞区域（像素值>0）
+    cell_mask = image > 0
+
+    if np.any(cell_mask):  # 检查是否存在单细胞区域
+        # 计算单细胞区域的最小值和最大值
+        cell_values = image[cell_mask]
+        min_val = np.min(cell_values)
+        max_val = np.max(cell_values)
+        # 避免除零错误
+        denominator = max_val - min_val
+        if denominator == 0:
+            denominator = 1e-8  # 防止除以零
+
+        # 对单细胞区域进行归一化
+        cell_normalized = (cell_values - min_val) / denominator
+        cell_normalized = target_min + (target_max - target_min) * cell_normalized
+        cell_normalized = np.clip(cell_normalized, target_min, target_max)
+
+        # 将归一化后的单细胞区域放回输出图像
+        normalized_image[cell_mask] = cell_normalized.astype(np.uint8)
+
     return normalized_image
 
-def count_single_cell_Ed(image_ed, image_rc, image_dd, mask, rc_min=0.0, rc_max=2.5, ed_min=0.0, ed_max=1.0):
+def count_single_cell_Ed(image_ed, image_rc, image_dd, image_da, image_aa, background_noise_values, mask, rc_min=0.0, rc_max=3, ed_min=0.0, ed_max=1.0):
     """
     输入都是基于numpy处理的图像
     1. 计算单细胞的 Ed 效率值，并统计所有的效率分布情况
     2. 同时运行 region_growth_segmentation 代码，分析 image_dd 上的种子点，并将其应用到 image_ed 上
     """
+    # print("掩码最大值", mask.max())
     regions = regionprops(mask)
-
-    # 在这里要定义rc的值，当rc的值在 rc_min-rc_max 之间表示合理区间
-    rc_mask = image_rc.copy()
-    rc_mask[rc_mask > rc_max] = 0
-    rc_mask[rc_mask < rc_min] = 0
-    rc_mask[rc_mask > 0] = 1
 
     # 拿到0为背景，细胞区域为1的掩码图像
     binary_mask = mask.copy()
     binary_mask[binary_mask > 0] = 1
 
-    # 掩码不合理的效率特征
-    rc_mask = rc_mask * binary_mask
-
-    # 在这里要筛选ed的值，当ed的值在 ed_min-ed_max 之间表示合理区间
-    image_ed[image_ed > ed_max] = 0
-    image_ed[image_ed < ed_min] = 0
-
-    # 掩码对应的点以判断增长点
-    image_dd = image_dd * rc_mask
-    image_ed = image_ed * rc_mask
-
     # 定义输出的结果
     result = {}
-
+    # print("单细胞区域数量", len(regions))
     for region in regions:
         # 细胞对应的标签
         cell_id = region.label
@@ -65,13 +69,51 @@ def count_single_cell_Ed(image_ed, image_rc, image_dd, mask, rc_min=0.0, rc_max=
         # 对各类图像划分单细胞区域
         cell_mask = (mask == region.label)[minr:maxr, minc:maxc]
         cell_image_dd = image_dd[minr:maxr, minc:maxc] * cell_mask
+        cell_image_aa = image_aa[minr:maxr, minc:maxc]
+        cell_image_da = image_da[minr:maxr, minc:maxc]
         cell_image_ed = image_ed[minr:maxr, minc:maxc]
-
-        # 对于cell_image 进行归一化操作，方便计算
+        cell_image_rc = image_rc[minr:maxr, minc:maxc]
+        # 对于cell_image 进行uni8化操作，方便计算
         cell_image_normalize_dd = min_max_normalize(cell_image_dd)
+        # show_gray_image(cell_image_normalize_dd)
 
+        # 确定增长阈值范围
+        valid_cell_image_dd = cell_image_normalize_dd[cell_image_normalize_dd > 0]
+        # 计算前10%的阈值（第90百分位数）
+        threshold = np.percentile(valid_cell_image_dd, 90)
+        # 单细胞背景均值
+        cell_background_value = valid_cell_image_dd.mean()
+        # 提取前5%的元素
+        top_percent = valid_cell_image_dd[valid_cell_image_dd > threshold].mean()
+        # print(top_percent, cell_background_value)
         # 种子点增长
-        seeds_mask = region_growth_segmentation(cell_image_normalize_dd)
+        seeds_mask = region_growth_segmentation(cell_image_normalize_dd,
+                                                threshold=(top_percent - cell_background_value),
+                                                threshold_abs=top_percent)
+
+        # 筛选三通道背景阈值合理的位置点位
+        # 判断对应的聚点是否aa通道满足大于三倍背景值的条件
+        seeds_mask = filter_mask_by_intensity(seeds_mask, cell_image_aa, background_noise_values['AA'])
+        # 判断对应的聚点是否da通道满足大于三倍背景值的条件
+        seeds_mask = filter_mask_by_intensity(seeds_mask, cell_image_da, background_noise_values['DA'])
+
+        # 筛选在符合Rc范围内的值
+        # 创建RC图像的掩码（值在0到3之间的区域为True）
+        rc_mask = (cell_image_rc >= rc_min) & (cell_image_rc <= rc_max)
+        # 将原始mask与RC掩码相结合
+        seeds_mask[~rc_mask] = 0  # 将RC值不在范围内的区域置为0
+
+        # 筛选在符合Ed范围内的值
+        # 创建RC图像的掩码（值在0到3之间的区域为True）
+        ed_mask = (cell_image_ed >= ed_min) & (cell_image_ed <= ed_max)
+        # 将原始mask与RC掩码相结合
+        seeds_mask[~ed_mask] = 0  # 将RC值不在范围内的区域置为0
+
+        # 筛选不符合区域大小的聚点
+        seeds_mask = filter_connected_components(seeds_mask)
+
+        # 获取前20的聚点进行分析
+        seeds_mask = get_top_intensity_regions(seeds_mask, cell_image_normalize_dd, 50)
 
         # 单细胞特征提取点 分别非0和存0两种图像进行采集
         cell_region_ed = cell_image_ed[cell_mask]
@@ -106,9 +148,12 @@ def count_single_cell_Ed(image_ed, image_rc, image_dd, mask, rc_min=0.0, rc_max=
             result[cell_id]['Ed_agg_min_value'] = 0
             result[cell_id]['Ed_agg_top_50_value'] = 0
             result[cell_id]['Ed_agg_top_25_value'] = 0
+        # 验证输出的ed是否正确
+        # print(result[cell_id]['Ed_agg_top_50_value'])
     # 创建一个 DataFrame
     result_df = pd.DataFrame.from_dict(result, orient='index')
     return result_df
+
 
 def top_25_percent_average(arr):
     """
@@ -146,105 +191,165 @@ def top_50_percent_average(arr):
     return average
 
 
+def filter_mask_by_intensity(seeds_mask, image_aa, aa_value, background_factor=2.0):
+    """
+    根据强度值筛选掩码区域，生成新的掩码图像
 
-def region_growth_segmentation(image):
+    参数:
+        seeds_mask: 原始掩码图像 (numpy数组，二值图像，非零值表示掩码区域)
+        image_aa: 用于筛选的强度图像 (numpy数组，与seeds_mask尺寸相同)
+        aa_value: 强度阈值系数，筛选条件为 强度 > 3*aa_value
+
+    返回:
+        filtered_mask: 筛选后的新掩码图像 (二值图像，满足条件的区域为1，其余为0)
+    """
+    # 确保输入图像尺寸一致
+    if seeds_mask.shape != image_aa.shape:
+        raise ValueError("seeds_mask和image_aa的尺寸必须一致")
+
+    # 创建新掩码，初始化为全0
+    filtered_mask = np.zeros_like(seeds_mask, dtype=np.uint8)
+
+    # 在原始掩码区域内筛选强度大于3*aa_value的像素
+    mask_region = seeds_mask > 0
+    valid_pixels = (image_aa > background_factor * aa_value) & mask_region
+
+    # 将满足条件的像素在新掩码中设为1
+    filtered_mask[valid_pixels] = 1
+
+    return filtered_mask
+
+
+def region_growth_segmentation(image_dd, threshold=15, threshold_abs=125):
     """
     在图像内进行聚点分割，并使用区域生长算法扩展聚点区域。
 
-    :param image: 灰度图像 (numpy array)
+    :param image_dd: 灰度图像 (numpy array)
+    :param threshold: 区域增长强度范围
+    :param threshold_abs: 种子点阈值范围
     :return: 分割后的二值图像，其中每个聚点及其扩展区域为 1 ，其余位置为0
     """
 
     # 预处理：高斯模糊减少噪声，增强对比度（可选）
-    blurred = cv2.GaussianBlur(image, (3, 3), 0)
+    blurred = cv2.GaussianBlur(image_dd, (3, 3), 0)
 
     # 检测当前图像内的局部最大值作为种子点
-    coordinates = peak_local_max(blurred, min_distance=20, threshold_abs=100)  # 调整参数以适应您的需求
-
-    # 存在值都很高的情况下，随机采集点进行分析
-    if len(coordinates) == 0:
-        coordinates = select_top_points(blurred, num_points=5, min_distance=20)
+    coordinates = peak_local_max(blurred, min_distance=20, threshold_abs=threshold_abs)  # 调整参数以适应您的需求
 
     # 创建标记图像（种子点列表）
     seeds = [tuple(coord) for coord in coordinates]
 
     # 应用区域生长算法
-    grown_regions = region_growth(image, seeds, threshold=30)  # 调整阈值以适应您的需求
-
+    grown_regions = region_growth(image_dd, seeds, threshold=threshold)  # 调整阈值以适应您的需求
+    # show_gray_image(grown_regions * 255)
     # 连通区域分析
     filtered_grown_regions = filter_connected_components(grown_regions)
 
     return filtered_grown_regions
 
-def select_top_points(image, num_points=5, min_distance=20):
+
+def region_growth(image, seeds, threshold=20, max_points=400):
     """
-    选择图像中灰度值最高的 num_points 个点，且点之间的距离至少为 min_distance 像素
-
-    :param image: 输入图像 (numpy array)
-    :param num_points: 要选择的点的数量
-    :param min_distance: 点之间的最小距离
-    :return: 选择的点的列表 [(row, col)]
-    """
-    flat_image = image.flatten()
-    sorted_indices = np.argsort(flat_image)[::-1]
-    rows, cols = image.shape
-    selected_points = []
-
-    for index in sorted_indices:
-        point = (index // cols, index % cols)
-        valid = True
-        for selected_point in selected_points:
-            distance = np.sqrt((point[0] - selected_point[0]) ** 2 + (point[1] - selected_point[1]) ** 2)
-            if distance < min_distance:
-                valid = False
-                break
-        if valid:
-            selected_points.append(point)
-            if len(selected_points) == num_points:
-                break
-
-    return selected_points
-
-def region_growth(image, seeds, threshold=30, max_points=100):
-    """
-    执行区域生长算法，并限制最大生长点数。
+    执行区域生长算法，并按每个种子点独立限制最大生长点数。
 
     :param image: 输入图像 (numpy array)
     :param seeds: 种子点列表 [(row, col)]
     :param threshold: 生长阈值，表示允许的最大灰度差异
-    :param max_points: 最大生长点数，默认为100
+    :param max_points: 每个种子点允许的最大生长点数，默认为100
     :return: 区域生长后的二值图像
     """
+    if len(seeds) == 0:
+        return np.zeros_like(image, dtype=np.uint8)
+
     segmented = np.zeros_like(image, dtype=np.uint8)
     processed = np.zeros_like(image, dtype=bool)
     s = generate_binary_structure(2, 2)  # 8-连通结构
 
-    seed_values = {seed: image[seed] for seed in seeds}  # 记录每个种子点的灰度值
+    # 记录每个种子点的灰度值
+    seed_values = {seed: image[seed] for seed in seeds}
 
     for seed in seeds:
-        queue = [seed]
-        processed[seed[0], seed[1]] = True
-        segmented[seed[0], seed[1]] = 1
-        point_count = 1
-        while queue:
-            current = queue.pop(0)
-            current_seed_value = seed_values[seed]  # 使用种子点的灰度值作为参考
+        # 跳过已经处理过的种子点
+        if processed[seed]:
+            continue
 
-            for offset in zip(*s.nonzero()):
-                x_new, y_new = current[0] + offset[0] - 1, current[1] + offset[1] - 1
-                if (0 <= x_new < image.shape[0]) and (0 <= y_new < image.shape[1]):
-                    neighbor_value = image[x_new, y_new]
-                    if abs(int(neighbor_value) - int(current_seed_value)) < threshold:
+        queue = [seed]
+        processed[seed] = True
+        segmented[seed] = 1
+        point_count = 1  # 每个种子点独立计数
+
+        while queue and point_count < max_points:
+            current = queue.pop(0)
+            current_seed_value = seed_values[seed]
+
+            # 遍历8-连通邻域
+            for i in range(s.shape[0]):
+                for j in range(s.shape[1]):
+                    if not s[i, j]:  # 跳过结构元素中为0的位置
+                        continue
+
+                    # 计算邻域点坐标
+                    x_new = current[0] + i - 1  # 减1是为了将中心移到当前点
+                    y_new = current[1] + j - 1
+
+                    # 检查边界
+                    if 0 <= x_new < image.shape[0] and 0 <= y_new < image.shape[1]:
+                        # 检查是否已处理
                         if not processed[x_new, y_new]:
-                            segmented[x_new, y_new] = 1
-                            queue.append((x_new, y_new))
-                            processed[x_new, y_new] = True
-                        point_count += 1  # 更新计数器
-                if point_count >= max_points:  # 达到最大点数后停止生长
+                            # 检查灰度差异
+                            if abs(int(image[x_new, y_new]) - int(current_seed_value)) < threshold:
+                                # 检查点数限制
+                                if point_count < max_points:
+                                    segmented[x_new, y_new] = 1
+                                    queue.append((x_new, y_new))
+                                    processed[x_new, y_new] = True
+                                    point_count += 1
+                                else:
+                                    break  # 跳出内层for循环
+                # 如果达到点数限制，跳出外层for循环
+                if point_count >= max_points:
                     break
+
     return segmented
 
-def filter_connected_components(segmented_image, min_size=10):
+
+def get_top_intensity_regions(seeds_mask, image_dd, n=5):
+    """
+    获取掩码中荧光强度均值最高的前N个连通区域，若不足N个则返回原掩码
+
+    参数:
+        seeds_mask: 原始掩码图像 (numpy数组，二值图像，非零值表示掩码区域)
+        image_dd: 荧光强度图像 (numpy数组，与seeds_mask尺寸相同)
+        n: 需要保留的最高强度区域数量，默认为5
+
+    返回:
+        若连通区域数量≥n: 仅包含前N个高强度区域的新掩码图像
+        若连通区域数量<n: 返回原始掩码seeds_mask
+    """
+    # 确保输入图像尺寸一致
+    if seeds_mask.shape != image_dd.shape:
+        raise ValueError("seeds_mask和image_dd的尺寸必须一致")
+
+    # 标记连通区域
+    labeled_array, num_features = ndimage.label(seeds_mask)
+
+    # 如果连通区域数量不足n，直接返回原掩码
+    if num_features < n:
+        return seeds_mask
+
+    # 计算每个连通区域的荧光强度均值
+    region_means = ndimage.mean(image_dd, labeled_array, index=range(1, num_features + 1))
+
+    # 获取强度均值最高的前N个区域的索引
+    top_indices = np.argsort(-np.array(region_means))[:n] + 1  # +1是因为region index从1开始
+
+    # 创建只包含前N个区域的新掩码
+    top_regions_mask = np.isin(labeled_array, top_indices).astype(np.uint8)
+
+    return top_regions_mask
+
+
+def filter_connected_components(segmented_image, min_size=20):
     """
     筛选连通组件，移除面积小于min_size的区域。
 

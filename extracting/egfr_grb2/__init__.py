@@ -23,6 +23,8 @@ def start(fret):
         self.image_Rc = None
         self.fret_mask = None
         self.nuclei_mask = None
+        # 统计三通道的背景阈值
+        self.background_noise_values = {}
 
     提取特征：
     1. 效率特征
@@ -31,15 +33,47 @@ def start(fret):
 
     需要判断是否存在细胞核图像，决定是否掩码细胞核提取特征
     """
-    cell_ed_df = count_single_cell_Ed(fret.image_Ed.numpy(), fret.image_Rc.numpy(), fret.image_DD.numpy(),
-                                      fret.fret_mask.numpy())
+    cell_ed_df = count_single_cell_Ed(image_ed=fret.image_Ed.numpy(),
+                                      image_rc=fret.image_Rc.numpy(),
+                                      image_dd=fret.image_DD.numpy(),
+                                      image_aa=fret.image_AA.numpy(),
+                                      image_da=fret.image_DA.numpy(),
+                                      background_noise_values = fret.background_noise_values,
+                                      mask=fret.fret_mask.numpy(),
+                                      rc_max=fret.rc_max,
+                                      rc_min=fret.rc_min,
+                                      ed_min=fret.ed_min,
+                                      ed_max=fret.ed_max
+                                      )
     cell_ed_df = cell_ed_df.add_prefix('Cell_')
     if fret.extract_organelle and os.path.exists(os.path.join(fret.current_sub_path, 'nmask.tif')):
         nuclei_mask = load_image_to_numpy(os.path.join(fret.current_sub_path, 'nmask.tif'), dtype=np.uint8)
         nuclei_mask, mit_mask = process_masks(fret.fret_mask.numpy(), nuclei_mask)
-        nuclei_ed_df = count_single_cell_Ed(fret.image_Ed.numpy(), fret.image_Rc.numpy(), fret.image_DD.numpy(), nuclei_mask)
+        nuclei_ed_df = count_single_cell_Ed(image_ed=fret.image_Ed.numpy(),
+                                            image_rc=fret.image_Rc.numpy(),
+                                            image_dd=fret.image_DD.numpy(),
+                                            image_aa=fret.image_AA.numpy(),
+                                            image_da=fret.image_DA.numpy(),
+                                            background_noise_values=fret.background_noise_values,
+                                            mask=nuclei_mask,
+                                            rc_max=fret.rc_max,
+                                            rc_min=fret.rc_min,
+                                            ed_min=fret.ed_min,
+                                            ed_max=fret.ed_max
+                                            )
         nuclei_ed_df = nuclei_ed_df.add_prefix("Nuclei_")
-        mit_ed_df = count_single_cell_Ed(fret.image_Ed.numpy(), fret.image_Rc.numpy(), fret.image_DD.numpy(), mit_mask)
+        mit_ed_df = count_single_cell_Ed(image_ed=fret.image_Ed.numpy(),
+                                         image_rc=fret.image_Rc.numpy(),
+                                         image_dd=fret.image_DD.numpy(),
+                                         image_aa=fret.image_AA.numpy(),
+                                         image_da=fret.image_DA.numpy(),
+                                         background_noise_values=fret.background_noise_values,
+                                         mask=mit_mask,
+                                         rc_max=fret.rc_max,
+                                         rc_min=fret.rc_min,
+                                         ed_min=fret.ed_min,
+                                         ed_max=fret.ed_max
+                                         )
         mit_ed_df = mit_ed_df.add_prefix("Mit_")
         merged_df = pd.concat([cell_ed_df, nuclei_ed_df, mit_ed_df], axis=1)
         merged_df['ObjectNumber'] = merged_df.index
@@ -52,12 +86,12 @@ def start(fret):
 
 def process_masks(mit_mask, nuclei_mask):
     """
-    处理两张掩码图像，删除nmask中mit_mask不存在的区域，并重新编码nmask，
-    同时生成nmask掩码后的mit图像。
+    处理两张掩码图像，删除 nmask 中mit_mask不存在的区域，并重新编码 nmask ，
+    同时生成 nmask 掩码后的mit图像。
 
     :param mit_mask: 从1开始编码细胞区域的掩码图像
     :param nuclei_mask: 从1开始编码细胞区域的掩码图像
-    :return: 处理后的nmask和nmask掩码后的mit图像
+    :return: 处理后的 nmask 和 nmask 掩码后的mit图像
     """
     # 找出mit_mask中存在的区域编号
     mit_regions = np.unique(mit_mask)

@@ -129,4 +129,4 @@ if __name__ == '__main__':
         print("CUDA is NOT available. GPU is OFF.")
 
     cell = MitNucleiSegmentation()
-    cell.start(r'D:\data\qrm\2025.03.26 A549 24H\ALM\6')
+    cell.start(r'D:\data\MXQ\20250515\PHE-Crizotinib-1h-d1-c0μm\7')
