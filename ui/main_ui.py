@@ -1,8 +1,8 @@
 import sys
 
 from PyQt5 import QtCore
-from PyQt5.QtCore import QMetaObject, Qt, Q_ARG
-from PyQt5.QtGui import QIcon, QTextCursor
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QVBoxLayout, QWidget,
     QTabWidget
@@ -11,24 +11,10 @@ from PyQt5.QtWidgets import (
 QtCore.QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
 
 
-class OutputRedirector:
-    def __init__(self, text_edit):
-        self.text_edit = text_edit
-
-    def write(self, text):
-        # 将光标移动到文本末尾
-        cursor = self.text_edit.textCursor()
-        cursor.movePosition(QTextCursor.End)
-        self.text_edit.setTextCursor(cursor)
-        # 插入文本，不换行
-        QMetaObject.invokeMethod(self.text_edit, "insertPlainText", Qt.QueuedConnection, Q_ARG(str, text))
-
-    def flush(self):
-        pass
-
 class ImageProcessingUI(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.tab_widget = None
         self.initUI()
 
     def initUI(self):
@@ -44,8 +30,9 @@ class ImageProcessingUI(QMainWindow):
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
 
-        # 创建中部操作区的标签页
-        actions = ['数据说明', '名称修改', '图像分割', 'FRET特征', '表型特征', 'FRET分析', '表型分析', '药效分析', '帮助']
+        # 创建中部操作区的标签页 '数据说明',
+        # TODO 存在问题 markdown 数据记载
+        actions = ['名称修改', '图像分割', 'FRET特征', '表型特征', 'FRET分析', '表型分析', '药效分析', '帮助']
         self.tab_widget = QTabWidget()
         for i in range(len(actions)):
             tab = QWidget()

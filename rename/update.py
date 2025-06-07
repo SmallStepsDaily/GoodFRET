@@ -1,6 +1,8 @@
 import os
 from pathlib import Path
 
+from ui import Output
+
 
 def have_target_image(dir_path, target_image_names):
     """
@@ -23,7 +25,7 @@ def have_target_image(dir_path, target_image_names):
     return all(name in existing_files for name in target_image_names)
 
 
-def update_file_name(process_file_path, have_files_name, chang_name):
+def update_file_name(process_file_path, have_files_name, chang_name, output=Output()):
     """
     修改文件名称
     process_file_path: 文件路径
@@ -32,11 +34,13 @@ def update_file_name(process_file_path, have_files_name, chang_name):
     """
     # 查看需要的已有图像是否存在 不存在报错
     if not have_target_image(process_file_path, have_files_name):
-        print("指定图像缺失++++++++++++++++++++++++", process_file_path)
+        print(f"指定图像缺失++++++++++++++++++++++++{process_file_path}")
+        output.append(f"指定图像缺失++++++++++++++++++++++++{process_file_path}")
         return
     # 检验是否存在目标图像
     if have_target_image(process_file_path, chang_name):
         print(f"该图像集内存在所指定的图像 : {process_file_path}")
+        output.append(f"该图像集内存在所指定的图像 : {process_file_path}")
         return
 
     # 过滤出以 'image_' 开头的 .tif 文件
@@ -44,6 +48,7 @@ def update_file_name(process_file_path, have_files_name, chang_name):
     name_list_length = len(chang_name)
     if len(image_files) != name_list_length:
         print("该图像集存在问题++++++++++++++++++++++++", process_file_path)
+        output.append(f"该图像集存在问题++++++++++++++++++++++++{process_file_path}")
         return
 
     # 确保按照文件名排序，以便正确识别第一张和第二张图像
@@ -56,5 +61,7 @@ def update_file_name(process_file_path, have_files_name, chang_name):
             # 重命名图像为 mit.tif
             image_paths[i].rename(Path(process_file_path) / chang_name[i])
         print(f"成功处理文件夹 : {process_file_path}")
+        output.append(f"成功处理文件夹 : {process_file_path}")
     except Exception as e:
         print(f"处理文件夹 {process_file_path} 时发生错误: {e}")
+        output.append(f"处理文件夹 {process_file_path} 时发生错误: {e}")

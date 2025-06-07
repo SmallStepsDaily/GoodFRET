@@ -35,6 +35,7 @@ def start(fret):
 
     需要判断是否存在细胞核图像，决定是否掩码细胞核提取特征
     """
+
     cell_ed_df, regions_mask = count_single_cell_Ed(image_ed=fret.image_Ed.numpy(),
                                       image_rc=fret.image_Rc.numpy(),
                                       image_dd=fret.image_DD.numpy(),
@@ -51,6 +52,9 @@ def start(fret):
     # 保存区域掩码结果
     tifffile.imwrite(os.path.join(fret.current_sub_path, 'regions_mask.tif'), regions_mask * 255)
     cell_ed_df['ObjectNumber'] = cell_ed_df.index
+    columns = ['ObjectNumber'] + [col for col in cell_ed_df.columns if col != 'ObjectNumber']
+    # 按新顺序重新排列列
+    cell_ed_df = cell_ed_df.reindex(columns=columns)
     # 提取共定位信息
     cell_localization_df = count_single_cell_localization(image_dd=fret.image_DD.numpy(),
                                    image_aa=fret.image_AA.numpy(),
@@ -60,7 +64,7 @@ def start(fret):
 
     # 直接按列合并
     merged_df = pd.concat([cell_ed_df, cell_localization_df], axis=1)
-    print(cell_localization_df)
+    # print(merged_df)
     return merged_df
 
 

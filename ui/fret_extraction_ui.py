@@ -1,10 +1,9 @@
 import sys
-import os
 import threading
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLineEdit, QPushButton, QFileDialog, \
     QLabel, QTextEdit, QRadioButton, QButtonGroup, QGridLayout
 
-from ui.main_ui import OutputRedirector
+from ui import TextUpdateHandler
 
 
 class FRETExtractionUI(QWidget):
@@ -139,6 +138,7 @@ class FRETExtractionUI(QWidget):
         log_label = QLabel("运行日志")
         log_label.setStyleSheet("font-size: 24px;")
         self.output_text = QTextEdit()
+        self.text_handler = TextUpdateHandler(self.output_text)
         self.output_text.setReadOnly(True)
         log_layout.addWidget(log_label)
         log_layout.addWidget(self.output_text)
@@ -183,62 +183,60 @@ class FRETExtractionUI(QWidget):
         self.stop_event.clear()  # 清除停止事件
         input_folder = self.folder_input.text().strip()
         self.output_text.clear()
-        # 重定向标准输出
-        original_stdout = sys.stdout
-        output_redirector = OutputRedirector(self.output_text)
-        sys.stdout = output_redirector
 
         self.output_text.append("输入文件路径为: " + str(input_folder))
         self.output_text.append("开始运行==========================================>FRET特征提取程序")
 
         try:
             # 为运行操作创建一个新线程
-            threading.Thread(target=self._run_fret_extraction, args=(input_folder, output_redirector)).start()
+            threading.Thread(target=self._run_fret_extraction, args=(input_folder, self.text_handler)).start()
         except Exception as e:
             self.output_text.append("运行出错==============================================>" + str(e))
             self.running = False
             self.run_button.setEnabled(True)
             self.stop_button.setEnabled(False)
-        finally:
-            # 恢复标准输出
-            sys.stdout = original_stdout
+
 
     def _run_fret_extraction(self, input_folder, output_redirector):
-        original_stdout = sys.stdout
-        sys.stdout = output_redirector
+        # 保证text输出安全，添加信号机制
+
         try:
             target_checked_button = self.target_button_group.checkedButton()
             feature_checked_button = self.feature_button_group.checkedButton()
+            fret_target_name = ''
+            if target_checked_button == self.target_bax_bak and feature_checked_button == self.extract_single_cell:
+                fret_target_name = 'bax_bak'
             if target_checked_button == self.target_egfr_grb2 and feature_checked_button == self.extract_single_cell:
-                from extracting.compute import FRETComputer
-                from batch.processing import BatchProcessing
-                # EGFR 参数Ed提取参数 验证批处理流程
-                def EGFR_process(image_set_path, fret_model):
-                    #############################
-                    # EGFR-FRET分析流程
-                    #############################
-                    # 进行分割流程
-                    return fret_model.start(image_set_path)
+                fret_target_name = 'egfr_grb2'
+            from extracting.compute import FRETComputer
+            from batch.processing import BatchProcessing
+            # 参数Ed提取参数 验证批处理流程
+            def process(image_set_path, fret_model):
+                #############################
+                # EGFR-FRET分析流程
+                #############################
+                # 进行分割流程
+                return fret_model.start(image_set_path)
 
-                fret = FRETComputer('egfr_grb2',
-                                    rc_min=float(self.rc_min_input.text()),
-                                    rc_max=float(self.rc_max_input.text()),
-                                    ed_min=float(self.ed_min_input.text()),
-                                    ed_max=float(self.ed_max_input.text()),
-                                    expose_times=(int(self.aa_input.text()),
-                                                  int(self.dd_input.text()),
-                                                  int(self.da_input.text())),
-                                    output_redirector=output_redirector)
-                batch = BatchProcessing(input_folder, stop_event=self.stop_event)
-                batch.start(EGFR_process, fret)
+            fret = FRETComputer(fret_target_name,
+                                rc_min=float(self.rc_min_input.text()),
+                                rc_max=float(self.rc_max_input.text()),
+                                ed_min=float(self.ed_min_input.text()),
+                                ed_max=float(self.ed_max_input.text()),
+                                expose_times=(int(self.aa_input.text()),
+                                              int(self.dd_input.text()),
+                                              int(self.da_input.text())),
+                                output_redirector=output_redirector)
+            batch = BatchProcessing(input_folder, stop_event=self.stop_event)
+            batch.start(process, fret)
             self.output_text.append("运行完成==============================================>FRET特征提取程序")
         except Exception as e:
             print("运行出错==============================================>" + str(e))
+            self.output_text.append("运行出错==============================================>" + str(e))
         finally:
             self.running = False
             self.run_button.setEnabled(True)
             self.stop_button.setEnabled(False)
-            sys.stdout = original_stdout
 
     def stop(self):
         self.running = False

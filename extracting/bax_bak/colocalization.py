@@ -65,12 +65,12 @@ def calculate_cell_stats(image_dd, image_aa, cell_mask, regions_mask):
     # 确保输入有效
     if np.sum(cell_mask) == 0:
         return {
-            'mito_ratio_mean': np.nan,
-            'non_mito_ratio_mean': np.nan,
-            'whole_cell_ratio_mean': np.nan,
-            'mito_pixels': 0,
-            'non_mito_pixels': 0,
-            'whole_cell_pixels': 0
+            'Fp_mito_ratio_mean': np.nan,
+            'Fp_non_mito_ratio_mean': np.nan,
+            'Fp_whole_cell_ratio_mean': np.nan,
+            'Fp_mito_pixels': 0,
+            'Fp_non_mito_pixels': 0,
+            'Fp_whole_cell_pixels': 0
         }
 
     # 计算线粒体区域（在当前细胞内的线粒体）
@@ -96,12 +96,12 @@ def calculate_cell_stats(image_dd, image_aa, cell_mask, regions_mask):
 
     # 返回统计结果
     return {
-        'mito_ratio_mean': np.mean(mito_ratio) if len(mito_ratio) > 0 else np.nan,
-        'non_mito_ratio_mean': np.mean(non_mito_ratio) if len(non_mito_ratio) > 0 else np.nan,
-        'whole_cell_ratio_mean': np.mean(whole_ratio) if len(whole_ratio) > 0 else np.nan,
-        'mito_pixels': len(mito_ratio),
-        'non_mito_pixels': len(non_mito_ratio),
-        'whole_cell_pixels': len(whole_ratio)
+        'Fp_mito_ratio_mean': np.mean(mito_ratio) if len(mito_ratio) > 0 else np.nan,
+        'Fp_non_mito_ratio_mean': np.mean(non_mito_ratio) if len(non_mito_ratio) > 0 else np.nan,
+        'Fp_whole_cell_ratio_mean': np.mean(whole_ratio) if len(whole_ratio) > 0 else np.nan,
+        'Fp_mito_pixels': len(mito_ratio),
+        'Fp_non_mito_pixels': len(non_mito_ratio),
+        'Fp_whole_cell_pixels': len(whole_ratio)
     }
 
 

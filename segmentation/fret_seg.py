@@ -41,10 +41,12 @@ class FRETSegmentation(Segmentation):
         merged_image = np.dstack((dd_image_np, aa_image_np))
         # 转换为灰度图像
         fret_image_np = self.pretreatment(merged_image)
-        print("分割细胞核操作 ===================> ", path)
+        print(f"分割细胞核操作 ===================> {path}")
+        self.output(f"分割细胞核操作 ===================> {path}")
         current_image_np = self.segmentation(fret_image_np)
         # self.show(current_image_np)
-        print("保存细胞核操作 ===================> ", path)
+        print(f"保存细胞核操作 ===================> {path}")
+        self.output(f"保存细胞核操作 ===================> {path}")
         # 保存对应的图像
         self.save(current_image_np, path, 'fret_mask.tif')
 

@@ -1,8 +1,6 @@
 import os
 import re
 import threading
-from threading import Thread
-
 import pandas as pd
 from batch.file import list_immediate_subdirectories, list_numeric_subdirectories
 

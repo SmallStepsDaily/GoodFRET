@@ -3,10 +3,8 @@ from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLineEdit, QPushButton, QFileDialog, \
     QTextEdit, QRadioButton, QLabel, QButtonGroup
 import threading
-from PyQt5.QtCore import pyqtSignal, QObject
-
 from batch.processing import BatchProcessing
-from ui.main_ui import OutputRedirector
+from ui import Output, TextUpdateHandler
 
 
 class SegmentationUI(QWidget):
@@ -133,6 +131,7 @@ class SegmentationUI(QWidget):
 
         # 底部运行输出文本框
         self.output_text = QTextEdit()
+        self.text_handler = TextUpdateHandler(self.output_text)
         self.output_text.setReadOnly(True)
         self.output_text.setLineWrapMode(QTextEdit.NoWrap)  # 禁止自动换行
         main_layout.addWidget(self.output_text)
@@ -167,27 +166,21 @@ class SegmentationUI(QWidget):
         self.stop_event.clear()  # 清除停止事件
         input_folder = self.input_folder_input.text().strip()
         self.output_text.clear()
-        # 重定向标准输出
-        original_stdout = sys.stdout
-        output_redirector = OutputRedirector(self.output_text)
-        sys.stdout = output_redirector
 
         self.output_text.append("输入文件路径为: " + str(input_folder))
         self.output_text.append("开始运行==========================================>图像单细胞分割程序")
 
         try:
             # 为运行操作创建一个新线程
-            threading.Thread(target=self._run_segmentation, args=(input_folder, output_redirector)).start()
+            threading.Thread(target=self._run_segmentation, args=(input_folder, self.text_handler)).start()
         except Exception as e:
-            self.output_text.append("运行出错==============================================>" + str(e))
+            self.output_text.append(f"运行出错==============================================>{e}")
             self.running = False
             self.run_button.setEnabled(True)
             self.stop_button.setEnabled(False)
-        finally:
-            # 恢复标准输出
-            sys.stdout = original_stdout
 
-    def _run_segmentation(self, input_folder, output_redirector):
+
+    def _run_segmentation(self, input_folder, output_redirector=Output()):
         original_stdout = sys.stdout
         sys.stdout = output_redirector
         try:
@@ -196,6 +189,7 @@ class SegmentationUI(QWidget):
             if checked_button == self.fret_radio:
                 # 执行 FRET 三通道的分割操作
                 print("执行 FRET 三通道的分割操作")
+                output_redirector.append("执行 FRET 三通道的分割操作")
                 from segmentation.fret_seg import FRETSegmentation
                 model = FRETSegmentation(
                     seg_diameter=int(self.cell_diameter_input.text()),

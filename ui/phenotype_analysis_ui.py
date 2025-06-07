@@ -1,6 +1,6 @@
 import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QHBoxLayout, QVBoxLayout, QLabel, QListWidget, QPushButton, \
-    QFileDialog, QRadioButton, QButtonGroup, QLineEdit, QFrame, QMessageBox
+    QFileDialog, QRadioButton, QButtonGroup, QLineEdit, QMessageBox
 
 
 class PhenotypeAnalysisUI(QWidget):

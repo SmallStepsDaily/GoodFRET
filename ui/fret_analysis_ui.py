@@ -4,9 +4,11 @@ import os
 import pandas as pd
 from PyQt5.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
                              QPushButton, QFileDialog, QRadioButton, QButtonGroup, QComboBox,
-                             QTextEdit, QFrame, QMessageBox, QSplitter, QScrollArea, QSizePolicy)
+                             QTextEdit, QFrame, QMessageBox, QSplitter, QScrollArea)
 from PyQt5.QtGui import QCursor, QPixmap, QImage, QPalette
-from PyQt5.QtCore import Qt, QSize
+from PyQt5.QtCore import Qt
+
+from ui import TextUpdateHandler
 
 
 class FRETAnalysisUI(QWidget):
@@ -158,6 +160,7 @@ class FRETAnalysisUI(QWidget):
         text_label.setStyleSheet("font-weight: bold; padding: 5px;")
 
         self.text_output = QTextEdit()
+        self.text_handler = TextUpdateHandler(self.text_output)
         self.text_output.setReadOnly(True)
         self.text_output.setCursor(QCursor())
         self.text_output.setStyleSheet("background-color: white; border: 1px solid #ccc; border-radius: 3px;")

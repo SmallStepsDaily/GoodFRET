@@ -20,6 +20,7 @@ class FileOpenThread(QThread):
 
     def run(self):
         try:
+            process = {}
             if os.name == 'nt':  # Windows 系统
                 process = subprocess.Popen(['start', '', self.file_path], shell=True)
             elif os.name == 'posix':  # Linux 或 macOS 系统

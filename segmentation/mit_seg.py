@@ -33,9 +33,11 @@ class MitSegmentation(Segmentation):
         mit_image_np = tiff.imread(os.path.join(path, 'Mit.tif'))
         # 将两个通道进行组合操作
         mit_image_np = self.pretreatment(mit_image_np)
-        print("分割线粒体掩码操作 ===================> " + str(path))
+        print(f"分割线粒体掩码操作 ===================> {path}")
+        self.output.append(f"分割线粒体掩码操作 ===================> {path}")
         mit_mask_np = self.segmentation(mit_image_np)
-        print("保存线粒体掩码操作 ===================> " + str(path))
+        print(f"保存线粒体掩码操作 ===================> {path}")
+        self.output.append(f"保存线粒体掩码操作 ===================> {path}")
         self.save(mit_mask_np, path, 'mmask.tif')
 
     def pretreatment(self, image):

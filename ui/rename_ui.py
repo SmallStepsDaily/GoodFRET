@@ -7,8 +7,6 @@ from PyQt5.QtCore import Qt
 
 from batch.processing import BatchProcessing
 from rename.update import update_file_name
-from ui.main_ui import OutputRedirector
-
 
 class RenameUI(QWidget):
     def __init__(self):
@@ -161,17 +159,9 @@ class RenameUI(QWidget):
         self.run_text_box.append(f"获取到的文件路径参数: {file_path}")
         self.run_text_box.append("开始运行==========================================>图像名称修改程序")
 
-        # 重定向标准输出
-        original_stdout = sys.stdout
-        output_redirector = OutputRedirector(self.run_text_box)
-        sys.stdout = output_redirector
-
         try:
             batch = BatchProcessing(file_path)
-            batch.start(update_file_name, self.leftlist, self.rightlist)
+            batch.start(update_file_name, self.leftlist, self.rightlist, self.run_text_box)
         except Exception as e:
             self.run_text_box.append("运行出错==============================================>")
             self.run_text_box.append(str(e))
-        finally:
-            # 恢复标准输出
-            sys.stdout = original_stdout

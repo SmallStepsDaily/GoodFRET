@@ -6,6 +6,8 @@ import torch
 from PIL import Image
 from tifffile import tifffile
 
+from ui import Output
+
 """
 FRET 效率计算函数
 注意数据加载顺序是 AA、DD、DA
@@ -33,6 +35,7 @@ def load_image_to_numpy(image_path, dtype=np.float32):
     # 将图像转换为 numpy 数组，并指定数据类型
     return np.array(img, dtype=dtype)
 
+
 class FRETComputer:
     """
     E-FRET 计算
@@ -52,7 +55,7 @@ class FRETComputer:
                  G: float = 5.494216,
                  k: float = 0.432334,
                  expose_times: tuple = (300, 300, 300),
-                 output_redirector=sys.stdout
+                 output_redirector=Output()
                  ):
         """
         :param a: 校正因子a
@@ -94,17 +97,14 @@ class FRETComputer:
         self.extract_organelle = True
 
         # 命令行输出到文本框内
-        self.original_stdout = sys.stdout
-        sys.stdout = output_redirector
-
-    def __del__(self):
-        sys.stdout = self.original_stdout
+        self.output = output_redirector
 
     def start(self, sub_path):
         """
         利用 pytorch 进行 fret 效率计算操作
         """
-        print("FRET计算处理 ============================================> ", sub_path)
+        print(f"FRET计算处理 ============================================> {sub_path}")
+        self.output.append(f"FRET计算处理 ============================================> {sub_path}")
         self.current_sub_path = sub_path
         # 加载图像为 tensor 并移动到相同设备（假设都在 CPU 或都在 GPU）
         image_AA = load_image_to_tensor(os.path.join(sub_path, 'AA.tif'))
@@ -163,7 +163,8 @@ class FRETComputer:
         start_extraction = importlib.import_module(f'extracting.{self.fret_target_name}')
         result = start_extraction.start(self)
 
-        print("FRET计算完成 ============================================> ", sub_path)
+        print(f"FRET计算完成 ============================================> {sub_path}")
+        self.output.append(f"FRET计算完成 ============================================> {sub_path}")
         return result
 
     @staticmethod

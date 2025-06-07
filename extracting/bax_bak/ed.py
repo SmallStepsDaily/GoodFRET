@@ -136,7 +136,7 @@ def count_single_cell_Ed(image_ed, image_rc, image_dd, image_da, image_aa, backg
             result[cell_id]['Ed_not_region_min_value'] = 0
             result[cell_id]['Ed_not_region_top_50_value'] = 0
             result[cell_id]['Ed_not_region_top_25_value'] = 0
-        print(str(result[cell_id]['Ed_region_variance']), "均值效率: ", result[cell_id]['Ed_region_mean_value'], " 前百分之50的效率值: ", result[cell_id]['Ed_not_region_top_50_value'])
+        # print(str(result[cell_id]['Ed_region_variance']), "均值效率: ", result[cell_id]['Ed_region_mean_value'], " 前百分之50的效率值: ", result[cell_id]['Ed_not_region_top_50_value'])
     # 创建一个 DataFrame
     result_df = pd.DataFrame.from_dict(result, orient='index')
     return result_df, regions_mask

@@ -80,6 +80,9 @@ def start(fret):
     else:
         merged_df = cell_ed_df
     merged_df['ObjectNumber'] = merged_df.index
+    columns = ['ObjectNumber'] + [col for col in merged_df.columns if col != 'ObjectNumber']
+    # 按新顺序重新排列列
+    merged_df = merged_df.reindex(columns=columns)
     return merged_df
 
 

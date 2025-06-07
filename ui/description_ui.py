@@ -2,13 +2,11 @@ import os
 import sys
 import markdown
 from PyQt5.QtCore import QUrl
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QFileDialog
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineSettings
-import re
 
 # 假设 current_dir 是当前脚本所在目录
 current_dir = os.path.dirname(os.path.abspath(__file__))
-
 
 class MarkdownReaderUI(QWidget):
     def __init__(self):

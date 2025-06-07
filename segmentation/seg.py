@@ -13,12 +13,7 @@ class Segmentation:
         self.seg_diameter = None
         self.seg_min_diameter = None
         self.seg_max_diameter = None
-        # 命令行输出到文本框内
-        self.original_stdout = sys.stdout
-        sys.stdout = output_redirector
-
-    def __del__(self):
-        sys.stdout = self.original_stdout
+        self.output = output_redirector
 
     def start(self, path):
         """
