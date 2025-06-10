@@ -1,13 +1,12 @@
 import os
 import sys
 import warnings
-from linecache import cache
-
 import cv2
 import numpy as np
 import tifffile as tiff
 from segmentation.seg import Segmentation, filter_labeled_masks_by_diameter
 from cellpose import models
+from ui import Output
 
 # 忽略特定的 UserWarning
 warnings.filterwarnings("ignore", category=UserWarning, message=".*is a low contrast image")
@@ -25,7 +24,7 @@ class MitNucleiSegmentation(Segmentation):
                  seg_nuclei_diameter=120,
                  seg_nuclei_min_diameter=80,
                  seg_nuclei_max_diameter=200,
-                 output_redirector=sys.stdout):
+                 output_redirector=Output()):
         super().__init__(output_redirector)
         self.channel = [1, 2]
         self.seg_diameter = seg_diameter
@@ -46,13 +45,16 @@ class MitNucleiSegmentation(Segmentation):
             mit_image_np = self.pretreatment(mit_image_np)
             nuclei_image_np = self.pretreatment(nuclei_image_np)
             current_image_np = np.stack([mit_image_np, nuclei_image_np], axis=-1)
-            print("分割线粒体和细胞核组合的细胞操作 ===================> " + str(path))
+            print(f"分割线粒体和细胞核组合的细胞操作 ===================>  {str(path)}")
+            self.output.append(f"分割线粒体和细胞核组合的细胞操作 ===================>  {str(path)}")
             mit_mask_np, nuclei_mask_np = self.segmentation(current_image_np)
-            print("保存线粒体和细胞核组合的细胞操作 ===================> " + str(path))
+            print(f"保存线粒体和细胞核组合的细胞操作 ===================>  {str(path)}")
+            self.output.append(f"保存线粒体和细胞核组合的细胞操作 ===================>  {str(path)}")
             self.save(mit_mask_np, path, 'mmask.tif')
             self.save(nuclei_mask_np, path, 'nmask.tif')
         except RuntimeError as e:
-            print("运行错误，不存在该图像++++++++++++++++++++++++", path)
+            print(f"运行错误，不存在该图像++++++++++++++++++++++++ {path}")
+            self.output.append(f"运行错误，不存在该图像++++++++++++++++++++++++ {path}")
 
 
     def pretreatment(self, image):

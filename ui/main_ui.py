@@ -2,7 +2,7 @@ import sys
 
 from PyQt5 import QtCore
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QIcon
+from PyQt5.QtGui import QIcon, QFont
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QVBoxLayout, QWidget,
     QTabWidget
@@ -32,7 +32,7 @@ class ImageProcessingUI(QMainWindow):
 
         # 创建中部操作区的标签页 '数据说明',
         # TODO 存在问题 markdown 数据记载
-        actions = ['名称修改', '图像分割', 'FRET特征', '表型特征', 'FRET分析', '表型分析', '药效分析', '帮助']
+        actions = ['数据说明', '名称修改', '图像分割', 'FRET特征', '表型特征', 'FRET分析', '表型分析', '药效分析', '帮助']
         self.tab_widget = QTabWidget()
         for i in range(len(actions)):
             tab = QWidget()
@@ -115,6 +115,8 @@ class ImageProcessingUI(QMainWindow):
 
 def load_window():
     app = QApplication(sys.argv)
+    font = QFont("Arial", 15)  # 例如设置为Arial，大小为12
+    app.setFont(font)
     window = ImageProcessingUI()
     window.show()
     sys.exit(app.exec_())

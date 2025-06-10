@@ -19,6 +19,8 @@ class FRETAnalysisUI(QWidget):
         self.data_df = None
         self.file_path = ''
         self.save_dir = ''
+        # 分析模型
+        self.analysis_model = ''
         self.current_pixmap = None
         self.current_result_str = ''
         self.auto_fit_mode = True  # 自动适应模式
@@ -314,6 +316,9 @@ class FRETAnalysisUI(QWidget):
                 QMessageBox.information(self, "保存成功", f"结果已成功保存到:\n{image_path}\n{text_path}")
             if self.dim_method == "标准化降维":
                 save("标准化统计.png", "SD标准化计算结果.txt")
+
+                # 标准化方法需要保存单细胞处理结果
+                self.analysis_model.save_dict_to_csv_files(self.save_dir)
             elif self.dim_method == "JS散度降维":
                 save("概率密度.png", "JS散度计算结果.txt")
 
@@ -359,6 +364,7 @@ class FRETAnalysisUI(QWidget):
         if self.standard_dim_radio.isChecked():
             from analysis.fret.standard_deviation import SD
             sd_model = SD(self.data_df)
+            self.analysis_model = sd_model
             if self.single_feature_radio.isChecked():
                 selected_feature = self.feature_combobox.currentText()
                 self.text_output.append(f"正在分析特征: {selected_feature}")

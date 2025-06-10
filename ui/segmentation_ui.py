@@ -181,8 +181,6 @@ class SegmentationUI(QWidget):
 
 
     def _run_segmentation(self, input_folder, output_redirector=Output()):
-        original_stdout = sys.stdout
-        sys.stdout = output_redirector
         try:
             # 获取当前被选中的按钮
             checked_button = self.button_group.checkedButton()
@@ -281,7 +279,6 @@ class SegmentationUI(QWidget):
             self.running = False
             self.run_button.setEnabled(True)
             self.stop_button.setEnabled(False)
-            sys.stdout = original_stdout
 
     def stop(self):
         self.running = False

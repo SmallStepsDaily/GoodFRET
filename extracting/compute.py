@@ -263,4 +263,4 @@ if __name__ == "__main__":
     fret = FRETComputer('bax_bak', expose_times=(300, 300, 300))
     # D:\data\20250412\BCLXL-BAK\MCF7-A133-2h-d1-c60μm\6
     # D:\data\20250412\BCLXL-BAK\MCF7-control-2h-d3-c0μm\4
-    fret.start(r'D:\data\20250412\BCLXL-BAK\MCF7-A133-2h-d1-c60μm\6')
+    fret.start(r'D:\data\20240614\MCF7-roi-2h-d1-c0.5μm\2')

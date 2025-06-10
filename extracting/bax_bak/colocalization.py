@@ -43,10 +43,12 @@ def count_single_cell_localization(image_dd, image_da, image_aa, mask, regions_m
         # 添加到总结果列表
         results.append(stats)
 
-    # 转换为DataFrame
-    df = pd.DataFrame(results).set_index('index')
-
-    return df
+    if len(results) != 0:
+        # 转换为DataFrame
+        df = pd.DataFrame(results).set_index('index')
+        return df
+    else :
+        return None
 
 
 def calculate_cell_stats(image_dd, image_aa, cell_mask, regions_mask):

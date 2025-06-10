@@ -3,6 +3,7 @@ import re
 import threading
 import pandas as pd
 from batch.file import list_immediate_subdirectories, list_numeric_subdirectories
+from extracting.compute import FRETComputer
 
 
 def parse_batch_dir_string(input_string):
@@ -74,6 +75,7 @@ class BatchProcessing:
             # 获取文件夹下所有的视野文件夹列表
             batch_dir_path = str(os.path.join(self.root, batch_dir))
             batch_site_dir_list = list_numeric_subdirectories(batch_dir_path)
+
             # 遍历批次文件夹下的不同视野文件
             for batch_site_dir in batch_site_dir_list:
                 # 检查是否需要停止
@@ -84,7 +86,6 @@ class BatchProcessing:
                 self.current_Metadata_site = int(batch_site_dir)
                 # 开始业务处理
                 result_df = process_function(site_dir_path, *args, **kwargs)
-
                 if result_df is not None:
                     # 保存基本信息到原有的文件上
                     result_df['Metadata_cell'] = self.current_Metadata_cell
@@ -100,7 +101,6 @@ class BatchProcessing:
                     new_col_order = metadata_cols + other_cols
                     result_df = result_df[new_col_order]
                     # 将 Ed_df 拼接到当前批次的数据上
-                    self.current_batch_data_df = self.current_batch_data_df.dropna(axis=1, how='all')
                     self.current_batch_data_df = pd.concat([self.current_batch_data_df, result_df], ignore_index=True)
 
         # 只有当 current_batch_data_df 不为空时才保存结果
@@ -112,3 +112,17 @@ class BatchProcessing:
         保存结果
         """
         self.current_batch_data_df.to_csv(os.path.join(self.root, self.csv_name), index=False)
+
+
+if __name__ == "__main__":
+    def process(image_set_path, fret_model):
+        #############################
+        # EGFR-FRET分析流程
+        #############################
+        # 进行分割流程
+        return fret_model.start(image_set_path)
+
+
+    fret = FRETComputer('bax_bak')
+    batch = BatchProcessing(r'D:\data\20240614')
+    batch.start(process, fret)

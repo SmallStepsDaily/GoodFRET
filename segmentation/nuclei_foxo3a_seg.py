@@ -9,6 +9,8 @@ from extracting.phenotype.foxo3a_nuclei import calculate_fluorescence_ratio
 from segmentation.seg import Segmentation, filter_labeled_masks_by_diameter
 from cellpose import models
 
+from ui import Output
+
 # 忽略特定的 UserWarning
 warnings.filterwarnings("ignore", category=UserWarning, message=".*is a low contrast image")
 # 忽略特定的 FutureWarning 主要是高版本的pytorch比较严谨一点
@@ -25,7 +27,7 @@ class FOXO3ANucleiSegmentation(Segmentation):
                  seg_nuclei_diameter=120,
                  seg_nuclei_min_diameter=80,
                  seg_nuclei_max_diameter=200,
-                 output_redirector=sys.stdout):
+                 output_redirector=Output()):
         super().__init__(output_redirector)
         self.channel = [0, 0]
         self.seg_diameter = seg_diameter
@@ -46,9 +48,11 @@ class FOXO3ANucleiSegmentation(Segmentation):
         foxo3a_image_np = self.pretreatment(foxo3a_image_np)
         nuclei_image_np = self.pretreatment(nuclei_image_np)
         current_image_np = np.stack([foxo3a_image_np, nuclei_image_np], axis=-1)
-        print("分割Foxo3a和细胞核组合的细胞操作 ===================> " + str(path))
+        print(f"分割Foxo3a和细胞核组合的细胞操作 ===================>  {str(path)}")
+        self.output.append(f"分割Foxo3a和细胞核组合的细胞操作 ===================>  {str(path)}")
         foxo3a_mask_np, nuclei_mask_np, original_nuclei_mask_np = self.segmentation(current_image_np)
-        print("保存Foxo3a和细胞核组合的细胞操作 ===================> " + str(path))
+        print(f"保存Foxo3a和细胞核组合的细胞操作 ===================>  {str(path)}")
+        self.output.append(f"保存Foxo3a和细胞核组合的细胞操作 ===================>  {str(path)}")
         self.save(foxo3a_mask_np, path, 'Foxo3a_mask.tif')
         self.save(original_nuclei_mask_np, path, 'nmask.tif')
 

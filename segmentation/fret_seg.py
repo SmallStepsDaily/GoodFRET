@@ -7,6 +7,8 @@ import tifffile as tiff
 from segmentation.seg import Segmentation, normalize_image, filter_labeled_masks_by_diameter
 from cellpose import models
 
+from ui import Output
+
 # 忽略特定的 UserWarning
 warnings.filterwarnings("ignore", category=UserWarning, message=".*is a low contrast image")
 # 忽略特定的 FutureWarning 主要是高版本的pytorch比较严谨一点
@@ -17,7 +19,7 @@ class FRETSegmentation(Segmentation):
     细胞核分割
     """
     def __init__(self,
-                 output_redirector=sys.stdout,
+                 output_redirector=Output(),
                  seg_diameter=200,
                  seg_min_diameter=100,
                  seg_max_diameter=500):
@@ -41,12 +43,12 @@ class FRETSegmentation(Segmentation):
         merged_image = np.dstack((dd_image_np, aa_image_np))
         # 转换为灰度图像
         fret_image_np = self.pretreatment(merged_image)
-        print(f"分割细胞核操作 ===================> {path}")
-        self.output(f"分割细胞核操作 ===================> {path}")
+        print(f"分割FRET细胞操作 ===================> {path}")
+        self.output.append(f"分割FRET细胞核操作 ===================> {path}")
         current_image_np = self.segmentation(fret_image_np)
         # self.show(current_image_np)
-        print(f"保存细胞核操作 ===================> {path}")
-        self.output(f"保存细胞核操作 ===================> {path}")
+        print(f"保存细胞操作 ===================> {path}")
+        self.output.append(f"保存FRET细胞操作 ===================> {path}")
         # 保存对应的图像
         self.save(current_image_np, path, 'fret_mask.tif')
 

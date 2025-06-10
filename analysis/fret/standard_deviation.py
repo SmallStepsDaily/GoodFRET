@@ -1,11 +1,13 @@
+import os.path
+
 import pandas as pd
-import numpy as np
+import seaborn as sns
 import matplotlib.pyplot as plt
 import base64
 from io import BytesIO
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, Tuple
 
-from sympy.stats.sampling.sample_numpy import numpy
+from matplotlib.lines import Line2D
 
 from analysis.fret import FRETCharacterizationValue
 
@@ -42,67 +44,86 @@ class SD(FRETCharacterizationValue):
         treatments = pd.unique(self.data[self.data['Metadata_treatment'] != control_name]['Metadata_treatment'])
         controls = self.data[self.data['Metadata_treatment'] == control_name]
 
+        # 创建新的DataFrame，保留Metadata_开头的列和ObjectNumber
+        metadata_columns = [col for col in self.data.columns if col.startswith('Metadata_') or col == 'ObjectNumber']
+
         # 首先计算control在各时间点的分布
         controls_data = {}
         init_control = None
         for time in times:
             time_data = controls[controls['Metadata_hour'] == time]
-            control_feature = time_data[feature_name].values[time_data[feature_name] > 0]
-            controls_data[time] = control_feature
-            if init_control is None and len(control_feature) > 0:
-                init_control = control_feature
+            controls_data[time] = time_data
+            if init_control is None and time_data.empty is False:
+                init_control = time_data
 
         # 标准化表征值
         self.all_sd_values = {}
         sd_drug = {}
         sd_control = {}
-        treatment_list = []
         # 计算各处理组在各时间点的分布及SD值
         for time in times:
             data = self.data[self.data['Metadata_hour'] == time]
             control = controls_data[time]  # 使用对应时间点的control分布
-            if len(control) == 0:
+            if control.empty:
                 control = init_control
-            sd_values = {}
             sd_drug[time] = {}
             sd_control[time] = {}
             for treatment in treatments:
                 treatment_data = data[data['Metadata_treatment'] == treatment]
-                if len(treatment_data) == 0:
+                if treatment_data.empty:
                     print(f"警告: 处理组 '{treatment}' 在时间点 {time} 没有有效数据")
                     continue
                 # 划分浓度的情况，查看数据下的不同浓度情况
                 concentrations = pd.unique(treatment_data['Metadata_concentration'])
-                if len(concentrations) > 1:
-                    sd_drug[time][treatment] = {}
-                    sd_control[time][treatment] = {}
-                    for concentration in concentrations:
-                        key = f"{time}h-{treatment}-{concentration}μm"
-                        drug = treatment_data[treatment_data['Metadata_concentration'] == concentration][feature_name].values
-                        E_value, sd_drug[time][f'{treatment}-{concentration}μm'], sd_control[time][f'{treatment}-{concentration}μm'] = self.compute(control, drug)
-                        treatment_list.append(f'{treatment}-{concentration}μm')
-                        sd_values[key] = E_value
-                        # 更新结果文本
-                        self.result += f"{str(time)}h-{control_name} vs {key}: SD值 = {E_value:.4f}\n"
-                # 如果没有浓度梯度的情况进行统计
-                else:
-                    drug = treatment_data[feature_name].values[treatment_data[feature_name] > 0]
-                    # 使用{time}-{treatment}作为键
-                    key = f"{time}h-{treatment}"
-                    E_value, sd_drug[time][treatment], sd_control[time][treatment] = self.compute(control, drug)
-                    treatment_list.append(treatment)
-                    sd_values[key] = E_value
-                    # 更新结果文本
-                    self.result += f"{str(time)}h-{control_name} vs {key}: SD值 = {E_value:.4f}\n"
-            self.all_sd_values[time] = sd_values
+                for concentration in concentrations:
+                    key_name = f'{treatment}_{time}h_{concentration}um'
+                    drug = treatment_data[treatment_data['Metadata_concentration'] == concentration]
+                    # 保证drug 和 control都是完整表格便于数据保存
+                    E_value, sd_drug[time][f'{treatment}-{concentration}μm'], sd_control[time][f'{treatment}-{concentration}μm'] \
+                        = self.compute(control[feature_name], drug[feature_name])
+                    # 将获得E值结果进行合并 拼接返回df格式
+                    drug_new_df = drug[metadata_columns].copy()
+                    drug_new_df['E'] = sd_drug[time][f'{treatment}-{concentration}μm']
+                    control_new_df = control[metadata_columns].copy()
+                    control_new_df['E'] = sd_control[time][f'{treatment}-{concentration}μm']
 
+                    self.all_sd_values[key_name] = pd.concat([drug_new_df, control_new_df], axis=0)
+                    # 更新结果文本
+                    self.result += f"{str(time)}h-{control_name} vs {key_name}: SD值 = {E_value:.4f}\n"
         # 生成统计箱型图
         # TODO 缺少浓度的输入情况
-        self.plot = self.draw_plt(sd_drug, sd_control, treatment_list, times, control_name)
-
+        self.plot = self.draw_plt(sd_drug)
         return self.all_sd_values, self.result, self.plot
 
-    def compute(self, control: np.ndarray, drug: np.ndarray) -> Tuple[float, np.ndarray, np.ndarray]:
+    def save_dict_to_csv_files(self, save_path):
+        """
+        将字典中的DataFrame保存为独立的CSV文件
+
+        参数:
+        data_dict (dict): 键值对字典，键为文件名，值为pandas DataFrame
+        save_path (str): 保存CSV文件的目标文件夹路径
+
+        返回:
+        None
+        """
+        # 确保保存路径存在
+        os.makedirs(save_path, exist_ok=True)
+
+        # 遍历字典中的每个项目
+        for key, df in self.all_sd_values.items():
+            try:
+                # 构建完整的文件路径
+                file_path = os.path.join(save_path, f"{key}.csv")
+
+                # 直接保存DataFrame
+                df.to_csv(file_path, index=False)
+
+                print(f"成功保存文件: {file_path}")
+
+            except Exception as e:
+                print(f"错误: 保存键 '{key}' 时出错 - {str(e)}")
+
+    def compute(self, control: pd.DataFrame, drug: pd.DataFrame) -> Tuple[float, pd.DataFrame, pd.DataFrame]:
         """
         计算单个处理组与对照组的SD值
 
@@ -111,196 +132,188 @@ class SD(FRETCharacterizationValue):
             - 处理组单个细胞的E值
             - 对照组单个细胞的E值
         """
-        control_mean = control.mean()
+        # 计算去除异常值后的SD值（使用IQR过滤）
+        def remove_outliers_by_iqr(data, multiplier=1.5):
+            q1 = data.quantile(0.25)
+            q3 = data.quantile(0.75)
+            iqr = q3 - q1
+            lower_bound = q1 - multiplier * iqr
+            upper_bound = q3 + multiplier * iqr
+            return data[(data >= lower_bound) & (data <= upper_bound)]
+        # 处理存在nan值的情况，采用均值填充
+        control_mean_val = control.mean()
+        drug_mean_val = drug.mean()
+        # 填充 NaN
+        control = control.fillna(control_mean_val)
+        drug = drug.fillna(drug_mean_val)
         control_std = control.std()
-        single_cell_drug_E_value = (drug - control_mean) / control_std
-        single_cell_control_E_value = (control - control_mean) / control_std
-        return abs(single_cell_drug_E_value.mean()), single_cell_drug_E_value, single_cell_control_E_value
+        single_cell_drug_E_value = (drug - control_mean_val) / control_std
+        single_cell_control_E_value = (control - control_mean_val) / control_std
+        return float(abs(remove_outliers_by_iqr(single_cell_drug_E_value).mean())), single_cell_drug_E_value, single_cell_control_E_value
 
-    def draw_plt(self, sd_drug: Dict[float, Dict[str, np.ndarray]],
-                 sd_control: Dict[float, Dict[str, np.ndarray]],
-                 treatments: List[str],
-                 times: List[float],
-                 control_name: str) -> str:
+    def draw_plt(self, sd_drug: Dict[float, Dict[str, pd.DataFrame]]) -> str:
         """
-        绘制增强版的不同处理组在各时间点的SD值统计箱型图
+        绘制带人为定义Control基准的E值箱型图（0h固定为Control=0），图例位于图像右侧
+
+        参数:
+            sd_drug: 数据字典，结构为 {时间: {处理组: E值数组}}（不含Control数据）
 
         返回:
             - 图像的base64编码字符串
         """
-        # 优化图表尺寸计算，根据时间点数量动态调整宽度
-        num_treatments = len(treatments)
+        # 强制包含0h作为第一个时间点
+        times = sorted(sd_drug.keys())
+
+        if 0 not in times:
+            times.insert(0, 0)  # 确保0h始终是第一个时间点
         num_times = len(times)
 
-        # 动态计算图表宽度，每个时间点大约占3英寸
-        fig_width = max(6, num_times * 2.5)
-        fig_height = 8
+        # 提取非0h的处理组（Control仅在0h人为定义）
+        treatments = sorted({treat for t in times if t != 0 for treat in sd_drug.get(t, {}).keys()})
+        num_treatments = len(treatments)
 
-        # 创建画布
+        # 设置英文字体
+        plt.rcParams["font.family"] = ["Arial", "sans-serif"]
+
+        # 动态计算图表尺寸（增加右侧空间用于图例）
+        fig_width = max(10, num_times * 3 + num_treatments * 0.5)  # 增加宽度
+        fig_height = 6 if num_treatments <= 3 else 8
         fig, ax = plt.subplots(figsize=(fig_width, fig_height))
 
-        plt.title('标准化差异值分析', fontsize=14, color='#666', pad=10)
+        # 图表标题
+        plt.title('E Value Distribution with Control Baseline', fontsize=16, color='#333', pad=20)
+        sns.set_style("whitegrid", {'grid.linestyle': '--'})
 
-        # 确定箱型图的位置和宽度
-        box_width = 0.8 / (num_treatments + 1)  # 调整宽度计算
-        spacing = 0.3  # 时间点之间的间距
+        # 可视化参数
+        box_width = 0.6 / max(1, num_treatments)  # 非0h处理组宽度
+        control_marker = 'x'  # 使用标准x标记
+        marker_size = 18
+        marker_color = '#dc2624'  # 红色
+        marker_edge_width = 3
+        baseline_color = '#0072BD'  # 基准线颜色
 
-        # 颜色映射
-        colors = CustomPalette.TREATMENTS
+        # 绘制基准线
+        ax.axhline(y=0, color=baseline_color, linestyle='--', alpha=0.7, linewidth=1.5)
 
-        # 用于存储所有箱型图对象，以便创建图例
-        boxplot_handles = []
-        legend_labels = []
+        # 存储处理组图例
+        legend_handles = []
+        legend_labels = treatments.copy()
+        legend_flag = {}
+        for treatment in treatments:
+            legend_flag[treatment] = True
 
-        # 绘制箱型图
+        # 绘制主图表
         for i, time in enumerate(times):
-            position_base = i * ((num_treatments + 1) * box_width + spacing)
+            x_base = i * 2.0  # 扩大时间点间距
+            if time == 0:
+                # 0h位置绘制Control标记（人为定义E=0）
+                ax.plot(x_base, 0,
+                        marker=control_marker, markersize=marker_size,
+                        markeredgewidth=marker_edge_width, color=marker_color,
+                        linestyle='none', label='Control (E=0)')
 
-            # 绘制对照组（每个时间点只绘制一次）
-            if time in sd_control and control_name in sd_control[time]:
-                control_data = sd_control[time][control_name]
-                if len(control_data) == 0:
-                    break
-                # 过滤超出[-2, 2]范围的数据点
-                filtered_control = np.clip(control_data, -2, 2)
+            else:
+                # 非0h时间点绘制处理组箱型图
+                time_data = sd_drug[time]
 
-                # 绘制带有增强视觉效果的箱型图（不显示异常值）
-                boxprops = dict(linestyle='-', linewidth=2, color='#333')
-                whiskerprops = dict(linestyle='-', linewidth=1.5, color='#333')
-                medianprops = dict(linestyle='-', linewidth=3, color='#D55E00')
-                flierprops = dict(marker='None')  # 不显示异常值
-                meanprops = dict(marker='D', markeredgecolor='black', markerfacecolor='white', markersize=8)
-
-                bp = ax.boxplot(
-                    [filtered_control],
-                    positions=[position_base],
-                    widths=box_width * 1.2,  # 对照组箱型图略宽
-                    patch_artist=True,
-                    boxprops=boxprops,
-                    whiskerprops=whiskerprops,
-                    medianprops=medianprops,
-                    flierprops=flierprops,
-                    meanprops=meanprops,
-                    showmeans=True
-                )
-
-                # 为箱型图填充颜色，添加渐变效果
-                for patch in bp['boxes']:
-                    patch.set_facecolor(CustomPalette.CONTROL)
-                    patch.set_alpha(0.8)
-
-                # 添加轻微的阴影效果
-                for patch in bp['boxes']:
-                    x, y = patch.get_xy()
-                    width, height = patch.get_width(), patch.get_height()
-                    shadow = plt.Rectangle((x + 2, y - 2), width, height, fill=True, color='#000', alpha=0.1, zorder=0)
-                    ax.add_patch(shadow)
-
-                # 保存对照组的箱型图对象用于图例
-                if not boxplot_handles:
-                    boxplot_handles.append(bp['boxes'][0])
-                    legend_labels.append(control_name)
-
-            # 绘制各处理组
-            for j, treatment in enumerate(treatments):
-                position = position_base + (j + 1) * box_width
-
-                if time in sd_drug and treatment in sd_drug[time]:
-                    treatment_data = sd_drug[time][treatment]
-
-                    # 过滤超出[-2, 2]范围的数据点
-                    filtered_treatment = np.clip(treatment_data, -2, 2)
-
-                    # 绘制带有增强视觉效果的箱型图（不显示异常值）
-                    boxprops = dict(linestyle='-', linewidth=2)
-                    whiskerprops = dict(linestyle='-', linewidth=1.5)
-                    medianprops = dict(linestyle='-', linewidth=3, color='#D55E00')
-                    flierprops = dict(marker='None')  # 不显示异常值
-                    meanprops = dict(marker='D', markeredgecolor='black', markerfacecolor='white', markersize=8)
-
+                for j, treat in enumerate(treatments):
+                    if time_data.get(treat) is None:
+                        continue
+                    data = time_data[treat].values
+                    x_pos = x_base + j * box_width
                     bp = ax.boxplot(
-                        [filtered_treatment],
-                        positions=[position],
-                        widths=box_width,
-                        patch_artist=True,
-                        boxprops=boxprops,
-                        whiskerprops=whiskerprops,
-                        medianprops=medianprops,
-                        flierprops=flierprops,
-                        meanprops=meanprops,
-                        showmeans=True
+                        data, positions=[x_pos], widths=box_width,
+                        patch_artist=True, showfliers=False,
+                        boxprops=dict(facecolor=sns.color_palette()[j], edgecolor='black'),
+                        medianprops=dict(color='white', linewidth=2),
+                        whiskerprops=dict(color='black', linewidth=1.2),
+                        capprops=dict(color='black', linewidth=1.2)
                     )
 
-                    # 为箱型图填充颜色，添加渐变效果
-                    color_idx = j % len(colors)
-                    for patch in bp['boxes']:
-                        patch.set_facecolor(colors[color_idx])
-                        patch.set_alpha(0.8)
+                    # 为每个处理组收集一次图例（仅需一次）
+                    if legend_flag[treat]:
+                        legend_handles.append(bp['boxes'][0])
+                        legend_flag[treat] = False
 
-                    # 保存第一个时间点的处理组箱型图对象用于图例
-                    if i == 0:
-                        boxplot_handles.append(bp['boxes'][0])
-                        legend_labels.append(treatment)
+        # 设置横坐标
+        ax.set_xticks([i * 2.0 for i in range(num_times)])
+        ax.set_xticklabels(['0h'] + [f"{t}h" for t in times if t != 0],
+                           fontsize=12, rotation=0, ha='center')
+        ax.set_ylabel('E Value', fontsize=14, labelpad=15)
 
-        # 设置x轴刻度和标签
-        x_ticks = [i * ((num_treatments + 1) * box_width + spacing) + ((num_treatments + 1) * box_width) / 2
-                   for i in range(num_times)]
-        ax.set_xticks(x_ticks)
-        ax.set_xticklabels([f"{time}小时" for time in times], fontsize=12)
+        # 创建复合图例（移至图像右侧）
+        control_handle = Line2D([0], [0], marker=control_marker, color='white',
+                                markerfacecolor=marker_color, markeredgecolor=marker_color,
+                                markersize=marker_size, markeredgewidth=marker_edge_width,
+                                linestyle='none')
 
-        # 添加图例
-        legend = ax.legend(boxplot_handles, legend_labels, loc='upper right',
-                           frameon=True, fancybox=True, shadow=True,
-                           title="处理组", fontsize=11)
-        legend.get_title().set_fontsize(12)
+        # 计算图例行数，优化布局
+        ncol = 1 if num_treatments <= 5 else 2  # 超过5个处理组时使用2列
+
+
+        legend = ax.legend(
+            [control_handle] + legend_handles,
+            ['Control (E=0)'] + legend_labels,
+            loc='center left',
+            bbox_to_anchor=(1, 0.5),  # 定位到图像右侧中心
+            frameon=True,
+            fancybox=True,
+            shadow=True,
+            title='Groups',
+            fontsize=11,
+            title_fontsize=12,
+            ncol=ncol,  # 动态设置列数
+            borderaxespad=0.5  # 与图像保持距离
+        )
         legend.get_title().set_fontweight('bold')
 
-        # 添加标题和标签
-        ax.set_xlabel('时间', fontsize=14, labelpad=10)
-        ax.set_ylabel('标准化差异值 (SD)', fontsize=14, labelpad=10)
-
-        # 固定y轴范围为-2到2
-        ax.set_ylim(-2, 2)
-
-        # 添加网格线
-        ax.grid(True, axis='y', linestyle='--', alpha=0.7)
-
-        # 添加参考线
-        ax.axhline(y=0, color='r', linestyle='--', alpha=0.3, linewidth=1.5)
-        ax.axhline(y=-2, color='g', linestyle=':', alpha=0.3, linewidth=1)
-        ax.axhline(y=2, color='g', linestyle=':', alpha=0.3, linewidth=1)
-
-        # 美化边框
-        for spine in ax.spines.values():
-            spine.set_color('#ccc')
-
-        # 添加数据来源注释
-        plt.figtext(0.99, 0.01, f"数据来源: 共{len(treatments)}个处理组，{num_times}个时间点",
-                    ha="right", fontsize=9, bbox={"facecolor": "white", "alpha": 0.5, "pad": 5})
-
         # 添加范围说明
-        plt.figtext(0.01, 0.01, "注: 超出[-2, 2]范围的数据已被截断",
-                    ha="left", fontsize=9, bbox={"facecolor": "white", "alpha": 0.5, "pad": 3})
+        plt.figtext(0.01, 0.98, "Note: 'x' = Manually defined Control baseline at 0h",
+                    ha="left", fontsize=9, bbox=dict(facecolor='white', alpha=0.8, pad=3))
 
-        # 调整布局
-        plt.tight_layout()
-        plt.subplots_adjust(top=0.9)  # 为标题留出空间
+        # 优化布局（为右侧图例留出空间）
+        plt.tight_layout(pad=5, rect=[0, 0, 0.85, 1])  # 右侧留出15%空间
 
-        # 将图像转换为base64编码
+        # 图像渲染
         buffer = BytesIO()
         plt.savefig(buffer, format='png', dpi=300, bbox_inches='tight')
-        buffer.seek(0)
-        image_png = buffer.getvalue()
-        buffer.close()
-
-        image_base64 = base64.b64encode(image_png).decode('utf-8')
+        image_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
         plt.close()
 
         return f'data:image/png;base64,{image_base64}'
 
 
+def save_base64_with_prefix(base64_str, output_path):
+    """
+    保存带前缀的Base64图像（如"data:image/png;base64,..."）
+    :param base64_str: 包含前缀的完整Base64字符串
+    :param output_path: 保存路径（如"image.png"）
+    """
+    try:
+        # 检查是否包含前缀
+        if not base64_str.startswith('data:image/png;base64,'):
+            raise ValueError("无效的Base64字符串，缺少前缀")
+
+        # 提取纯Base64数据（去除前缀）
+        pure_base64 = base64_str.split('base64,')[1]
+
+        # 补全填充字符（解决Incorrect padding错误）
+        missing_padding = len(pure_base64) % 4
+        if missing_padding != 0:
+            pure_base64 += '=' * (4 - missing_padding)
+
+        # 解码并保存为PNG文件
+        with open(output_path, 'wb') as f:
+            f.write(base64.b64decode(pure_base64))
+
+        print(f"图像已成功保存至：{output_path}")
+
+    except Exception as e:
+        print(f"保存失败：{str(e)}")
+
 if __name__ == '__main__':
-    data_df = pd.read_csv(r"C:\Code\python\csv_data\gl\20250509\20250412-20250513对照组FRET.csv")
+    data_df = pd.read_csv(r"C:/Code/python/csv_data/gl/20250412/BCLXL-BAK/FRET替换513对照组数据.csv")
     sd_model = SD(data_df)
-    values, result_str, image = sd_model.start(feature_name='Cell_Ed_agg_top_50_value')
-    print(result_str)
+    # Cell_Ed_region_top_50_value
+    values, result_str, image = sd_model.start(feature_name='Cell_Ed_region_top_50_value')
+    save_base64_with_prefix(image, r"C:\Users\pengs\Downloads\test.png")

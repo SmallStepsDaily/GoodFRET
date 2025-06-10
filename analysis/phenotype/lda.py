@@ -146,7 +146,7 @@ class LDAClassifyModel(Model):
         df['S'] = df['Predicted_Probability'] - control_predict_mean
         return df, drug_predict_value
 
-    def save_dict_to_csv_files(self, save_path):
+    def save_dict_to_csv_files(self, save_path, ptype='BF'):
         """
         将字典中的DataFrame保存为独立的CSV文件
 
@@ -164,7 +164,7 @@ class LDAClassifyModel(Model):
         for key, df in self.result_df.items():
             try:
                 # 构建完整的文件路径
-                file_path = os.path.join(save_path, f"{key}.csv")
+                file_path = os.path.join(save_path, f"{ptype}-{key}.csv")
 
                 # 直接保存DataFrame
                 df.to_csv(file_path, index=False)
@@ -174,7 +174,7 @@ class LDAClassifyModel(Model):
             except Exception as e:
                 print(f"错误: 保存键 '{key}' 时出错 - {str(e)}")
 
-    def save_dict_to_images(self, save_path, format='PNG'):
+    def save_dict_to_images(self, save_path, format='PNG', ptype='BF'):
         """
         将字典中的PIL Image对象保存为独立的图像文件
 
@@ -193,7 +193,7 @@ class LDAClassifyModel(Model):
         for key, img in self.result_train_images.items():
             try:
                 # 构建完整的文件路径（添加扩展名）
-                file_path = os.path.join(save_path, f"{key}.{format.lower()}")
+                file_path = os.path.join(save_path, f"{ptype}-{key}.{format.lower()}")
 
                 # 保存图像
                 img.save(file_path, format=format)
@@ -357,20 +357,20 @@ def run_lda(file_paths, save_path):
     # 保存对应的结果
     if files.mit_df is not None:
         mit_result = LDAClassifyModel(files.mit_df, 'Mit')
-        mit_result.save_dict_to_csv_files(save_path)
-        mit_result.save_dict_to_images(save_path)
+        mit_result.save_dict_to_csv_files(save_path, ptype='Mit')
+        mit_result.save_dict_to_images(save_path, ptype='Mit')
         mit_result.save_result_image(save_path, "线粒体荧光表征值箱型图.png")
         result_str += mit_result.result_str + '\n'
     if files.bf_df is not None:
         bf_result = LDAClassifyModel(files.bf_df, 'BF')
-        bf_result.save_dict_to_csv_files(save_path)
-        bf_result.save_dict_to_images(save_path)
+        bf_result.save_dict_to_csv_files(save_path, ptype='BF')
+        bf_result.save_dict_to_images(save_path, ptype='BF')
         bf_result.save_result_image(save_path, "明场表征值箱型图.png")
         result_str += bf_result.result_str + '\n'
     if files.nuclei_df is not None:
         nuclei_result = LDAClassifyModel(files.nuclei_df, 'Nuclei')
-        nuclei_result.save_dict_to_csv_files(save_path)
-        nuclei_result.save_dict_to_images(save_path)
+        nuclei_result.save_dict_to_csv_files(save_path, ptype='Nuclei')
+        nuclei_result.save_dict_to_images(save_path, ptype='Nuclei')
         nuclei_result.save_result_image(save_path, "细胞核荧光表征值箱型图.png")
         result_str += nuclei_result.result_str + '\n'
 
@@ -378,6 +378,7 @@ def run_lda(file_paths, save_path):
     with open(os.path.join(save_path, "表型表征值.txt"), 'w') as file:
         file.write(result_str)
         print("成功保存结果:", os.path.join(save_path, "表型表征值.txt"))
+
 
 if __name__ == '__main__':
     paths = [r"C:\Code\python\csv_data\gl\20250412\BCLXL-BAK\FB_BF.csv"]
