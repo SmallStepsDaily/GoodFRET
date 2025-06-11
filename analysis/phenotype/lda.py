@@ -1,5 +1,6 @@
 import os.path
 
+import numpy as np
 import pandas as pd
 import seaborn as sns
 from io import BytesIO
@@ -40,7 +41,8 @@ class LDAClassifyModel(Model):
 
         # 1. 划分数据集为训练集和验证集（例如 70% 训练，30% 测试）
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42, stratify=y)
-
+        indices = np.argwhere(X_train == 'A1331852')
+        print(indices)
         # 创建测试集标记
         is_test = pd.Series(False, index=X.index)
         is_test[X_test.index] = True
@@ -224,6 +226,9 @@ class LDAClassifyModel(Model):
                 # 筛选出当前 Metadata_hour 和 Metadata_treatment 的数据
                 subset_data = self.df[(self.df['Metadata_hour'] == hour) & (self.df['Metadata_treatment'] == treatment)]
 
+                # 提示当前时间点
+                print(f"LDA计算时间为 {hour}h")
+
                 # 如果该时间点下的加药组数据为空，则不执行后续操作
                 if subset_data.empty:
                     continue
@@ -238,6 +243,7 @@ class LDAClassifyModel(Model):
                 concentrations = pd.unique(subset_data['Metadata_concentration'])
                 for concentration in concentrations:
                     concentration_subset_data = subset_data[subset_data['Metadata_concentration'] == concentration]
+
                     if concentration_subset_data.empty:
                         continue
                     key_name = f'{treatment}_{hour}h_{concentration}um'
@@ -381,5 +387,5 @@ def run_lda(file_paths, save_path):
 
 
 if __name__ == '__main__':
-    paths = [r"C:\Code\python\csv_data\gl\20250412\BCLXL-BAK\FB_BF.csv"]
+    paths = [r"C:\Code\python\csv_data\gl\20250412\BCLXL-BAK\BCLXL-FB_BF四种实验数据.csv"]
     run_lda(paths, 'C:/Users/pengs/Downloads')

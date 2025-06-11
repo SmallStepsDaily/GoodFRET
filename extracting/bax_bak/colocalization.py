@@ -54,7 +54,7 @@ def count_single_cell_localization(image_dd, image_da, image_aa, mask, regions_m
 def calculate_cell_stats(image_dd, image_aa, cell_mask, regions_mask):
     """
     计算单个细胞内不同区域的强度比统计数据
-
+    需要对于单细胞图像进行归一化操作，统计出的比值才正确
     参数:
         image_dd: dd通道图像
         image_aa: aa通道图像
@@ -74,6 +74,9 @@ def calculate_cell_stats(image_dd, image_aa, cell_mask, regions_mask):
             'Fp_non_mito_pixels': 0,
             'Fp_whole_cell_pixels': 0
         }
+    # 寻找单细胞区域的荧光强度最小值和最大值
+    cell_intensity_min = (image_dd * cell_mask).min()
+    cell_intensity_max = (image_dd * cell_mask).max()
 
     # 计算线粒体区域（在当前细胞内的线粒体）
     mito_mask = cell_mask * regions_mask
@@ -82,14 +85,14 @@ def calculate_cell_stats(image_dd, image_aa, cell_mask, regions_mask):
     non_mito_mask = cell_mask * (regions_mask == 0)
 
     # 提取各区域的像素值
-    dd_mito = image_dd[mito_mask > 0]
-    aa_mito = image_aa[mito_mask > 0]
+    dd_mito = min_max_normalize(image_dd[mito_mask > 0], cell_intensity_min, cell_intensity_max)
+    aa_mito = min_max_normalize(image_aa[mito_mask > 0], cell_intensity_min, cell_intensity_max)
 
-    dd_non_mito = image_dd[non_mito_mask > 0]
-    aa_non_mito = image_aa[non_mito_mask > 0]
+    dd_non_mito = min_max_normalize(image_dd[non_mito_mask > 0], cell_intensity_min, cell_intensity_max)
+    aa_non_mito = min_max_normalize(image_aa[non_mito_mask > 0], cell_intensity_min, cell_intensity_max)
 
-    dd_whole = image_dd[cell_mask > 0]
-    aa_whole = image_aa[cell_mask > 0]
+    dd_whole = min_max_normalize(image_dd[cell_mask > 0], cell_intensity_min, cell_intensity_max)
+    aa_whole = min_max_normalize(image_aa[cell_mask > 0], cell_intensity_min, cell_intensity_max)
 
     # 计算强度比（避免除以零）
     mito_ratio = calculate_ratio(aa_mito, dd_mito)
@@ -121,3 +124,25 @@ def calculate_ratio(aa_values, dd_values):
     # 避免除以零
     valid_indices = dd_values > 0
     return aa_values[valid_indices] / dd_values[valid_indices]
+
+
+def min_max_normalize(data, data_min=0, data_max=65000, feature_range=(0, 1)):
+    """
+    对输入数据进行 Min-Max 归一化，将数据缩放到指定范围
+
+    参数:
+        data: numpy数组，输入数据
+        feature_range: 元组，指定归一化后的数据范围，默认为(0, 1)
+
+    返回:
+        numpy数组，归一化后的数据
+    """
+
+    # 防止除以零错误
+    if data_max == data_min:
+        return np.full_like(data, feature_range[0])
+
+    # 归一化计算
+    normalized_data = feature_range[0] + (data - data_min) * (feature_range[1] - feature_range[0]) / (
+                data_max - data_min)
+    return normalized_data

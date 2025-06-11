@@ -1,15 +1,12 @@
 import os.path
-
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import base64
 from io import BytesIO
 from typing import Dict, Tuple
-
 from matplotlib.lines import Line2D
-
-from analysis.fret import FRETCharacterizationValue
+from analysis.fret import FRETCharacterizationValue, save_base64_with_prefix
 
 # 设置中文字体支持
 plt.rcParams["font.family"] = ["SimHei"]
@@ -29,7 +26,7 @@ class CustomPalette:
 
 class SD(FRETCharacterizationValue):
     def __init__(self, data_df: pd.DataFrame):
-        self.data = data_df
+        super().__init__(data_df)
         self.result = ''
         self.value = 0
         self.plot = None
@@ -45,8 +42,7 @@ class SD(FRETCharacterizationValue):
         controls = self.data[self.data['Metadata_treatment'] == control_name]
 
         # 创建新的DataFrame，保留Metadata_开头的列和ObjectNumber
-        metadata_columns = [col for col in self.data.columns if col.startswith('Metadata_') or col == 'ObjectNumber']
-
+        metadata_columns = self.metadata_columns
         # 首先计算control在各时间点的分布
         controls_data = {}
         init_control = None
@@ -283,33 +279,6 @@ class SD(FRETCharacterizationValue):
         return f'data:image/png;base64,{image_base64}'
 
 
-def save_base64_with_prefix(base64_str, output_path):
-    """
-    保存带前缀的Base64图像（如"data:image/png;base64,..."）
-    :param base64_str: 包含前缀的完整Base64字符串
-    :param output_path: 保存路径（如"image.png"）
-    """
-    try:
-        # 检查是否包含前缀
-        if not base64_str.startswith('data:image/png;base64,'):
-            raise ValueError("无效的Base64字符串，缺少前缀")
-
-        # 提取纯Base64数据（去除前缀）
-        pure_base64 = base64_str.split('base64,')[1]
-
-        # 补全填充字符（解决Incorrect padding错误）
-        missing_padding = len(pure_base64) % 4
-        if missing_padding != 0:
-            pure_base64 += '=' * (4 - missing_padding)
-
-        # 解码并保存为PNG文件
-        with open(output_path, 'wb') as f:
-            f.write(base64.b64decode(pure_base64))
-
-        print(f"图像已成功保存至：{output_path}")
-
-    except Exception as e:
-        print(f"保存失败：{str(e)}")
 
 if __name__ == '__main__':
     data_df = pd.read_csv(r"C:/Code/python/csv_data/gl/20250412/BCLXL-BAK/FRET替换513对照组数据.csv")
