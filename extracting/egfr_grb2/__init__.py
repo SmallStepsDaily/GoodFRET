@@ -5,7 +5,6 @@ import pandas as pd
 from extracting.compute import load_image_to_numpy
 from extracting.egfr_grb2.ed import count_single_cell_Ed
 
-
 def start(fret):
     """
     fret 具有如下参数可以调用
@@ -49,6 +48,7 @@ def start(fret):
     if fret.extract_organelle and os.path.exists(os.path.join(fret.current_sub_path, 'nmask.tif')):
         nuclei_mask = load_image_to_numpy(os.path.join(fret.current_sub_path, 'nmask.tif'), dtype=np.uint8)
         nuclei_mask, mit_mask = process_masks(fret.fret_mask.numpy(), nuclei_mask)
+        print(f"细胞核区域数量{nuclei_mask.max()} 线粒体区域数量{mit_mask.max()}")
         nuclei_ed_df = count_single_cell_Ed(image_ed=fret.image_Ed.numpy(),
                                             image_rc=fret.image_Rc.numpy(),
                                             image_dd=fret.image_DD.numpy(),
@@ -86,40 +86,83 @@ def start(fret):
     return merged_df
 
 
-
 def process_masks(mit_mask, nuclei_mask):
     """
-    处理两张掩码图像，删除 nmask 中mit_mask不存在的区域，并重新编码 nmask ，
-    同时生成 nmask 掩码后的mit图像。
+    处理两张掩码图像，确保每个线粒体区域对应一个细胞核区域，
+    删除mit_mask中不存在对应细胞核的区域，并重新编码细胞核掩码，
+    同时生成细胞核掩码后的线粒体图像。
 
-    :param mit_mask: 从1开始编码细胞区域的掩码图像
-    :param nuclei_mask: 从1开始编码细胞区域的掩码图像
-    :return: 处理后的 nmask 和 nmask 掩码后的mit图像
+    :param mit_mask: 从1开始编码线粒体区域的掩码图像
+    :param nuclei_mask: 从1开始编码细胞核区域的掩码图像
+    :return: 处理后的细胞核掩码和细胞核掩码后的线粒体图像
     """
     # 找出mit_mask中存在的区域编号
     mit_regions = np.unique(mit_mask)
     mit_regions = mit_regions[mit_regions > 0]  # 排除背景（编号为0）
 
-    # 创建一个映射字典，将nmask中的区域编号映射到mit_mask中的编号
+    # 找出nuclei_mask中存在的区域编号
+    nuclei_regions = np.unique(nuclei_mask)
+    nuclei_regions = nuclei_regions[nuclei_regions > 0]  # 排除背景
+
+    # 记录已经被分配的细胞核区域
+    assigned_nuclei = set()
+
+    # 创建一个映射字典，将nuclei_mask中的区域编号映射到新的连续编号
     region_mapping = {}
     new_nuclei_mask = np.zeros_like(nuclei_mask)
     new_index = 1
 
-    for region in mit_regions:
-        # 找出mit_mask中当前区域的位置
-        mit_region_mask = (mit_mask == region)
+    # 为每个线粒体区域找到最佳匹配的细胞核区域
+    for mit_region in mit_regions:
+        # 获取当前线粒体区域的掩码
+        mit_region_mask = (mit_mask == mit_region)
 
-        # 找出nmask中与当前mit区域重叠的区域
-        overlapping_regions = np.unique(nuclei_mask[mit_region_mask])
-        overlapping_regions = overlapping_regions[overlapping_regions > 0]  # 排除背景
+        # 计算该线粒体区域与每个细胞核区域的重叠程度
+        best_overlap_ratio = 0
+        best_nucleus = None
 
-        for overlap in overlapping_regions:
-            if overlap not in region_mapping:
-                region_mapping[overlap] = new_index
-                new_nuclei_mask[nuclei_mask == overlap] = new_index
-                new_index += 1
+        for nucleus_region in nuclei_regions:
+            # 跳过已经被分配的细胞核
+            if nucleus_region in assigned_nuclei:
+                continue
 
-    # 生成nmask掩码后的mit图像
-    mit_masked_by_nuclei_mask = np.where(new_nuclei_mask == 0, mit_mask, 0)
+            # 获取当前细胞核区域的掩码
+            nucleus_region_mask = (nuclei_mask == nucleus_region)
+
+            # 计算重叠区域
+            overlap = np.logical_and(mit_region_mask, nucleus_region_mask)
+
+            # 计算重叠比例（相对于细胞核区域）
+            overlap_ratio = np.sum(overlap) / np.sum(nucleus_region_mask) if np.sum(nucleus_region_mask) > 0 else 0
+
+            # 如果这个细胞核区域与当前线粒体的重叠更好，则更新最佳匹配
+            if overlap_ratio > best_overlap_ratio:
+                best_overlap_ratio = overlap_ratio
+                best_nucleus = nucleus_region
+
+        # 如果找到了匹配的细胞核区域，并且重叠比例足够高，则建立映射
+        if best_nucleus is not None and best_overlap_ratio > 0.1:  # 设置最小重叠阈值
+            region_mapping[best_nucleus] = new_index
+            new_nuclei_mask[nuclei_mask == best_nucleus] = new_index
+            assigned_nuclei.add(best_nucleus)
+            new_index += 1
+
+    # 生成细胞核掩码后的线粒体图像
+    # 只保留那些有线粒体-细胞核匹配的线粒体区域
+    mit_masked_by_nuclei_mask = np.zeros_like(mit_mask)
+    for old_nucleus, new_idx in region_mapping.items():
+        nucleus_mask = (nuclei_mask == old_nucleus)
+        # 找出与这个细胞核匹配的线粒体区域
+        matched_mit_region = None
+        for mit_region in mit_regions:
+            mit_region_mask = (mit_mask == mit_region)
+            overlap = np.logical_and(mit_region_mask, nucleus_mask)
+            if np.sum(overlap) > 0:
+                matched_mit_region = mit_region
+                break
+
+        if matched_mit_region is not None:
+            # 只保留线粒体中与细胞核重叠的部分
+            mit_masked_by_nuclei_mask[overlap] = matched_mit_region
 
     return new_nuclei_mask, mit_masked_by_nuclei_mask

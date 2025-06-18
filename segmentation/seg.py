@@ -64,28 +64,60 @@ class Segmentation:
     @staticmethod
     def common_mask(mit_mask_np, nuclei_mask_np):
         """
-        提取共同区域
+        提取线粒体和细胞核的对应区域，使用统一编号系统但保持各自独立
         """
-        unique_mit_labels = np.unique(mit_mask_np)[1:]  # 排除背景标签 0
+        unique_mit_labels = np.unique(mit_mask_np)[1:]  # 排除背景标签0
         common_mit_mask = np.zeros_like(mit_mask_np)
         common_nuclei_mask = np.zeros_like(nuclei_mask_np)
+
+        # 存储已匹配的细胞核标签，避免重复分配
+        matched_nuclei = set()
 
         new_label = 1
         for mit_label in unique_mit_labels:
             mit_region = (mit_mask_np == mit_label)
-            # 检查线粒体区域内是否有细胞核
+
+            # 获取线粒体区域内的细胞核标签
             nuclei_in_mit = nuclei_mask_np[mit_region]
-            if np.any(nuclei_in_mit):
-                # 找到该线粒体区域内的主要细胞核标签
-                main_nuclei_label = np.bincount(nuclei_in_mit[nuclei_in_mit > 0]).argmax()
-                nuclei_region = (nuclei_mask_np == main_nuclei_label)
-                # 检查该细胞核区域内是否有线粒体
-                mit_in_nuclei = mit_mask_np[nuclei_region]
-                if np.any(mit_in_nuclei):
-                    # 标记共同区域
-                    common_mit_mask[mit_region] = new_label
-                    common_nuclei_mask[nuclei_region] = new_label
-                    new_label += 1
+            nuclei_labels = np.unique(nuclei_in_mit[nuclei_in_mit > 0])
+
+            if len(nuclei_labels) == 0:
+                continue  # 无线粒体-细胞核重叠，跳过
+
+            # 过滤已匹配的细胞核
+            valid_nuclei = [n for n in nuclei_labels if n not in matched_nuclei]
+            if not valid_nuclei:
+                continue
+
+            # 计算每个候选细胞核与当前线粒体的重叠面积
+            overlap_areas = []
+            for n_label in valid_nuclei:
+                nuclei_region = (nuclei_mask_np == n_label)
+                overlap = np.logical_and(mit_region, nuclei_region)
+                overlap_areas.append((n_label, np.sum(overlap)))
+
+            # 按重叠面积排序，选择最大的
+            overlap_areas.sort(key=lambda x: x[1], reverse=True)
+            main_nuclei_label, max_overlap = overlap_areas[0]
+
+            # 计算双向覆盖率
+            mit_coverage = max_overlap / np.sum(mit_region)
+            nuclei_coverage = max_overlap / np.sum(nuclei_mask_np == main_nuclei_label)
+
+            # 确保双向覆盖率都足够高
+            if mit_coverage < 0.1 or nuclei_coverage < 0.1:  # 可调整阈值
+                continue
+
+            # 获取选中的细胞核区域
+            nuclei_region = (nuclei_mask_np == main_nuclei_label)
+
+            # 分配相同的编号给线粒体和细胞核区域
+            common_mit_mask[mit_region] = new_label
+            common_nuclei_mask[nuclei_region] = new_label
+
+            # 标记该细胞核已被匹配
+            matched_nuclei.add(main_nuclei_label)
+            new_label += 1
 
         return common_mit_mask, common_nuclei_mask
 

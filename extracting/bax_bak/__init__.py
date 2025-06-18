@@ -4,7 +4,7 @@ import pandas as pd
 from tifffile import tifffile
 
 from extracting.bax_bak.colocalization import count_single_cell_localization
-from extracting.compute import load_image_to_numpy
+from extracting.bax_bak.rc import count_single_cell_rc
 from extracting.bax_bak.ed import count_single_cell_Ed
 
 
@@ -35,38 +35,52 @@ def start(fret):
 
     需要判断是否存在细胞核图像，决定是否掩码细胞核提取特征
     """
+    cell_ed_df = pd.DataFrame()
+    cell_rc_df = pd.DataFrame()
+    rc_ed_df = None
+    cell_localization_df = pd.DataFrame()
+    if fret.need_Ed:
+        cell_ed_df, regions_mask = count_single_cell_Ed(image_ed=fret.image_Ed.numpy(),
+                                          image_rc=fret.image_Rc.numpy(),
+                                          image_dd=fret.image_DD.numpy(),
+                                          image_aa=fret.image_AA.numpy(),
+                                          image_da=fret.image_DA.numpy(),
+                                          background_noise_values = fret.background_noise_values,
+                                          mask=fret.fret_mask.numpy(),
+                                          rc_max=fret.rc_max,
+                                          rc_min=fret.rc_min,
+                                          ed_min=fret.ed_min,
+                                          ed_max=fret.ed_max)
+        # 保存区域掩码结果
+        tifffile.imwrite(os.path.join(fret.current_sub_path, 'regions_mask.tif'), regions_mask * 255)
+        cell_ed_df['ObjectNumber'] = cell_ed_df.index
+        columns = ['ObjectNumber'] + [col for col in cell_ed_df.columns if col != 'ObjectNumber']
+        # 按新顺序重新排列列
+        cell_ed_df = cell_ed_df.reindex(columns=columns)
+        print("效率特征")
+    if fret.need_Rc:
+        cell_rc_df, rc_ed_df = count_single_cell_rc(cell_mask=fret.fret_mask.numpy(),
+                                                    regions_mask=regions_mask,
+                                                    image_rc=fret.image_Rc.numpy(),
+                                                    image_ed=fret.image_Ed.numpy())
+        # 保存rc-ed的结果值
+        rc_ed_df.to_csv(os.path.join(fret.current_sub_path, 'rc-ed.csv'))
+        print("浓度特征")
 
-    cell_ed_df, regions_mask = count_single_cell_Ed(image_ed=fret.image_Ed.numpy(),
-                                      image_rc=fret.image_Rc.numpy(),
-                                      image_dd=fret.image_DD.numpy(),
-                                      image_aa=fret.image_AA.numpy(),
-                                      image_da=fret.image_DA.numpy(),
-                                      background_noise_values = fret.background_noise_values,
-                                      mask=fret.fret_mask.numpy(),
-                                      rc_max=fret.rc_max,
-                                      rc_min=fret.rc_min,
-                                      ed_min=fret.ed_min,
-                                      ed_max=fret.ed_max
-                                      )
-    cell_ed_df = cell_ed_df.add_prefix('Cell_')
-    # 保存区域掩码结果
-    tifffile.imwrite(os.path.join(fret.current_sub_path, 'regions_mask.tif'), regions_mask * 255)
-    cell_ed_df['ObjectNumber'] = cell_ed_df.index
-    columns = ['ObjectNumber'] + [col for col in cell_ed_df.columns if col != 'ObjectNumber']
-    # 按新顺序重新排列列
-    cell_ed_df = cell_ed_df.reindex(columns=columns)
-    # 提取共定位信息
-    cell_localization_df = count_single_cell_localization(image_dd=fret.image_DD.numpy(),
-                                   image_aa=fret.image_AA.numpy(),
-                                   image_da=fret.image_DA.numpy(),
-                                   mask=fret.fret_mask.numpy(),
-                                   regions_mask=regions_mask)
+    if fret.need_Fp:
+        # 提取共定位信息
+        cell_localization_df = count_single_cell_localization(image_dd=fret.image_DD.numpy(),
+                                       image_aa=fret.image_AA.numpy(),
+                                       image_da=fret.image_DA.numpy(),
+                                       mask=fret.fret_mask.numpy(),
+                                       regions_mask=regions_mask)
+        # 提取溶度比信息，获取浓度比对应的rc-ed图像
+        print("共定位特征")
 
     # 直接按列合并
-    merged_df = pd.concat([cell_ed_df, cell_localization_df], axis=1)
-    # print(merged_df)
-    return merged_df
+    merged_df = pd.concat([cell_ed_df, cell_localization_df, cell_rc_df], axis=1)
 
+    return merged_df, rc_ed_df
 
 
 def process_masks(mit_mask, nuclei_mask):

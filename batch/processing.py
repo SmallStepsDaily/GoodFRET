@@ -52,6 +52,7 @@ class BatchProcessing:
         self.current_image_set_path = ''
         # 最后的批文件
         self.current_batch_data_df = pd.DataFrame()
+        self.current_batch_rc_ed_df = pd.DataFrame()
         # 添加 stop_event 属性
         self.stop_event = stop_event
         # 保存的文件名称
@@ -85,7 +86,15 @@ class BatchProcessing:
                 # 验证文件完整性
                 self.current_Metadata_site = int(batch_site_dir)
                 # 开始业务处理
-                result_df = process_function(site_dir_path, *args, **kwargs)
+                result = process_function(site_dir_path, *args, **kwargs)
+                # 动态解包
+                if isinstance(result, tuple):
+                    # 处理多个返回值
+                    result_df, rc_ed_df = result
+                else:
+                    # 处理单个返回值
+                    result_df = result
+                    rc_ed_df = None
                 if result_df is not None:
                     # 保存基本信息到原有的文件上
                     result_df['Metadata_cell'] = self.current_Metadata_cell
@@ -102,16 +111,35 @@ class BatchProcessing:
                     result_df = result_df[new_col_order]
                     # 将 Ed_df 拼接到当前批次的数据上
                     self.current_batch_data_df = pd.concat([self.current_batch_data_df, result_df], ignore_index=True)
+                if rc_ed_df is not None:
+                    # 保存基本信息到原有的文件上
+                    rc_ed_df['Metadata_cell'] = self.current_Metadata_cell
+                    rc_ed_df['Metadata_hour'] = self.current_Metadata_hour
+                    rc_ed_df['Metadata_treatment'] = self.current_Metadata_treatment
+                    rc_ed_df['Metadata_site'] = self.current_Metadata_site
+                    rc_ed_df['Metadata_dish'] = self.current_Metadata_dish
+                    rc_ed_df['Metadata_concentration'] = self.current_Metadata_concentration
+
+                    # 调整列顺序，将 Metadata_ 开头的列放在最前面
+                    metadata_cols = [col for col in rc_ed_df.columns if col.startswith('Metadata_') or col == 'ObjectNumber']
+                    other_cols = [col for col in rc_ed_df.columns if not col.startswith('Metadata_')]
+                    new_col_order = metadata_cols + other_cols
+                    rc_ed_df = rc_ed_df[new_col_order]
+                    # 将 Ed_df 拼接到当前批次的数据上
+                    self.current_batch_rc_ed_df = pd.concat([self.current_batch_rc_ed_df, rc_ed_df], ignore_index=True)
 
         # 只有当 current_batch_data_df 不为空时才保存结果
-        if not self.current_batch_data_df.empty:
-            self.save_result()
+        self.save_result()
+        print(f"完成怕批处理报错 ========================================================> {self.root}")
 
     def save_result(self):
         """
         保存结果
         """
-        self.current_batch_data_df.to_csv(os.path.join(self.root, self.csv_name), index=False)
+        if not self.current_batch_data_df.empty:
+            self.current_batch_data_df.to_csv(os.path.join(self.root, self.csv_name), index=False)
+        if not self.current_batch_rc_ed_df.empty:
+            self.current_batch_rc_ed_df.to_csv(os.path.join(self.root, 'rc_ed.csv'), index=False)
 
 
 if __name__ == "__main__":
@@ -124,5 +152,5 @@ if __name__ == "__main__":
 
 
     fret = FRETComputer('bax_bak')
-    batch = BatchProcessing(r'D:\data\20240614')
+    batch = BatchProcessing(r'D:\data\20250513\BCLXL-BAK')
     batch.start(process, fret)

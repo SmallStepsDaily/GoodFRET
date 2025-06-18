@@ -273,6 +273,7 @@ class SegmentationUI(QWidget):
                 # 执行细胞核 - 细胞质的分割操作
                 print("执行细胞核 - 细胞质的分割操作")
             print("完成分割操作！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！")
+            self.output_text.append("完成分割操作！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！")
         except Exception as e:
             print("运行出错==============================================>" + str(e))
         finally:

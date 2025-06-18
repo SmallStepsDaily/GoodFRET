@@ -4,7 +4,7 @@ import warnings
 import cv2
 import numpy as np
 import tifffile as tiff
-from segmentation.seg import Segmentation, filter_labeled_masks_by_diameter
+from segmentation.seg import Segmentation, filter_labeled_masks_by_diameter, normalize_image
 from cellpose import models
 from ui import Output
 
@@ -26,7 +26,9 @@ class MitNucleiSegmentation(Segmentation):
                  seg_nuclei_max_diameter=200,
                  output_redirector=Output()):
         super().__init__(output_redirector)
-        self.channel = [1, 2]
+        self.original_width = 2028
+        self.original_height = 2028
+        self.factor = 1
         self.seg_diameter = seg_diameter
         self.seg_min_diameter = seg_min_diameter
         self.seg_max_diameter = seg_max_diameter
@@ -41,9 +43,12 @@ class MitNucleiSegmentation(Segmentation):
             # 读取细胞核和线粒体图像
             mit_image_np = tiff.imread(os.path.join(path, 'Mit.tif'))
             nuclei_image_np = tiff.imread(os.path.join(path, 'Hoechst.tif'))
+            # 记录原始图像尺寸
+            self.original_height, self.original_width = mit_image_np.shape
+            self.factor = self.original_height / 512
             # 将两个通道进行组合操作
             mit_image_np = self.pretreatment(mit_image_np)
-            nuclei_image_np = self.pretreatment(nuclei_image_np)
+            nuclei_image_np = self.pretreatment(nuclei_image_np, need_CLAHE=True)
             current_image_np = np.stack([mit_image_np, nuclei_image_np], axis=-1)
             print(f"分割线粒体和细胞核组合的细胞操作 ===================>  {str(path)}")
             self.output.append(f"分割线粒体和细胞核组合的细胞操作 ===================>  {str(path)}")
@@ -57,19 +62,31 @@ class MitNucleiSegmentation(Segmentation):
             self.output.append(f"运行错误，不存在该图像++++++++++++++++++++++++ {path}")
 
 
-    def pretreatment(self, image):
-        result_image = self.log_image(image)
+    def pretreatment(self, image_np, need_CLAHE=False):
+        if image_np.mean() * 20 < image_np.max():
+            print("该图像的存在较高的亮度，需要进行log对换降低最高亮度值！！！")
+            result_image = self.log_image(image_np)
+        else:
+            result_image = image_np
         result_image = self.gaussian_image(result_image)
+        if need_CLAHE:
+            # 细胞核图像需要局部增强对比度操作
+            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+            result_image = clahe.apply(result_image)
+
+        # 下采样到 512x512
+        result_image = cv2.resize(result_image, (512, 512), interpolation=cv2.INTER_AREA)
+        # show_gray_image(result_image)
         return result_image
 
 
     def seg_mit_nuclei(self, image_np, factor):
         masks, flows, styles, diams = self.seg_model.eval(image_np,
                                                           diameter=self.seg_diameter / factor,
-                                                          channels=self.channel,
+                                                          channels=[1, 2],
                                                           flow_threshold=0.4,
-                                                          resample=True,
-                                                          do_3D=False)
+                                                          resample=True)
+        # show_gray_image(masks)
         masks_filtered = filter_labeled_masks_by_diameter(masks,
                                                           min_diameter=self.seg_min_diameter / factor,
                                                           max_diameter=self.seg_max_diameter / factor)
@@ -79,12 +96,11 @@ class MitNucleiSegmentation(Segmentation):
         masks, flows, styles, diams = self.seg_nuclei_model.eval(image_np,
                                                                     diameter=self.seg_nuclei_diameter / factor,
                                                                     channels=[0, 0],
-                                                                    flow_threshold=0.4,
-                                                                    resample=True,
-                                                                    do_3D=False)
+                                                                    flow_threshold=0.8,)
         masks_filtered = filter_labeled_masks_by_diameter(masks,
                                                           min_diameter=self.seg_nuclei_min_diameter / factor,
                                                           max_diameter=self.seg_nuclei_max_diameter / factor)
+        # show_gray_image(masks)
         return masks_filtered
 
 
@@ -95,27 +111,18 @@ class MitNucleiSegmentation(Segmentation):
         2. 分割
         :return:
         """
-        # 记录原始图像尺寸
-        original_height, original_width = image_np.shape[ : 2]
-        factor = 1
-        if original_height == original_width:
-            # 下采样到 512x512
-            image_np = cv2.resize(image_np, (512, 512), interpolation=cv2.INTER_AREA)
-            factor = original_height / 512
-
         # 分割单细胞区域掩码返回图像
-        mit_mask_np = self.seg_mit_nuclei(image_np, factor)
+        mit_mask_np = self.seg_mit_nuclei(image_np, self.factor)
         # 分割细胞核掩码返回图像
-        nuclei_mask_np = self.seg_nuclei(image_np[:, :, 1], factor)
+        nuclei_mask_np = self.seg_nuclei(image_np[:, :, 1], self.factor)
 
         mit_mask_np, nuclei_mask_np = self.common_mask(mit_mask_np, nuclei_mask_np)
 
-        if original_height == original_width:
-            # 还原掩码到原始尺寸
-            mit_mask_np = cv2.resize(mit_mask_np.astype(np.uint8), (original_width, original_height),
-                                         interpolation=cv2.INTER_NEAREST).astype(np.uint8)
-            nuclei_mask_np = cv2.resize(nuclei_mask_np.astype(np.uint8), (original_width, original_height),
-                                         interpolation=cv2.INTER_NEAREST).astype(np.uint8)
+        # 还原掩码到原始尺寸
+        mit_mask_np = cv2.resize(mit_mask_np.astype(np.uint8), (self.original_width, self.original_height),
+                                     interpolation=cv2.INTER_NEAREST).astype(np.uint8)
+        nuclei_mask_np = cv2.resize(nuclei_mask_np.astype(np.uint8), (self.original_width, self.original_height),
+                                     interpolation=cv2.INTER_NEAREST).astype(np.uint8)
 
         return mit_mask_np, nuclei_mask_np
 
@@ -131,4 +138,4 @@ if __name__ == '__main__':
         print("CUDA is NOT available. GPU is OFF.")
 
     cell = MitNucleiSegmentation()
-    cell.start(r'D:\data\MXQ\20250515\PHE-Crizotinib-1h-d1-c0μm\7')
+    cell.start(r'D:\data\hql\2025.05.26 fret hoechst mito BF\H1975-Afa-2h-d6-c22μm\14')

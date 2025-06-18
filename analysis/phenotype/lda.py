@@ -26,7 +26,7 @@ class LDAClassifyModel(Model):
         self._run()
 
     @staticmethod
-    def compute(drug, control, features_columns, drug_name):
+    def compute(drug, control, features_columns, drug_name, key_name):
         """
         合并 drug 和 control 数据进行 LDA 分析
         输入1组加药数据和对照数据
@@ -39,10 +39,19 @@ class LDAClassifyModel(Model):
         metadata_cols = ['ObjectNumber', 'Metadata_site', 'Metadata_concentration', 'Metadata_hour']
         metadata = combined_data[metadata_cols].copy()
 
+        # 0. 在分割前平衡数据
+        if len(drug) < len(control) + 20:
+            from imblearn.under_sampling import RandomUnderSampler
+            # 创建平衡器
+            rus = RandomUnderSampler(random_state=42)
+            # 应用平衡
+            X_balanced, y_balanced = rus.fit_resample(X, y)
+        else:
+            X_balanced, y_balanced = X, y
+
         # 1. 划分数据集为训练集和验证集（例如 70% 训练，30% 测试）
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42, stratify=y)
-        indices = np.argwhere(X_train == 'A1331852')
-        print(indices)
+        X_train, X_test, y_train, y_test = train_test_split(X_balanced, y_balanced, test_size=0.3, random_state=42, stratify=y_balanced)
+
         # 创建测试集标记
         is_test = pd.Series(False, index=X.index)
         is_test[X_test.index] = True
@@ -59,7 +68,7 @@ class LDAClassifyModel(Model):
 
         # 4. 在测试集上评估模型
         y_test_pred = calibrated_lda.predict(X_test_scaled)
-        print(drug_name, "Validation Classification Report:")
+        print(key_name, "Validation Classification Report:")
         print(classification_report(y_test, y_test_pred))
 
         # 使用 LabelBinarizer 将多分类标签转换为二进制格式
@@ -143,10 +152,13 @@ class LDAClassifyModel(Model):
         control_predict_mean = df.loc[df['Metadata_treatment'] == 'control', 'Predicted_Probability'].mean()
         # 仅计算测试集的预测概率
         drug_predict_list = df.loc[(df['Metadata_treatment'] == drug_name) & (df['Is_Test'] == True), 'Predicted_Probability']
+        # 在这里如果加药组数量比较少的情况下，需要添加训练组数据进去
+        if len(drug_predict_list) <= 10:
+            drug_predict_list = pd.concat([drug_predict_list, df.loc[(df['Metadata_treatment'] == drug_name), 'Predicted_Probability'].sample(n=20)], axis=0)
         drug_predict_value = (drug_predict_list - control_predict_mean).mean()
         # 计算表型表征值
         df['S'] = df['Predicted_Probability'] - control_predict_mean
-        return df, drug_predict_value
+        return df, float(drug_predict_value)
 
     def save_dict_to_csv_files(self, save_path, ptype='BF'):
         """
@@ -247,8 +259,8 @@ class LDAClassifyModel(Model):
                     if concentration_subset_data.empty:
                         continue
                     key_name = f'{treatment}_{hour}h_{concentration}um'
-                    # 将两类数据输入到 computer 函数中
-                    drug_predict_df, drug_predict_image = self.compute(concentration_subset_data, control_data, self.features_columns, treatment)
+                    # 将两类数据输入到 compute 函数中
+                    drug_predict_df, drug_predict_image = self.compute(concentration_subset_data, control_data, self.features_columns, treatment, key_name)
                     # 保存训练模型的loss图像
                     self.result_train_images[key_name] = drug_predict_image
                     # TODO 需要修改为每个加药情况单独一个统计
@@ -361,18 +373,18 @@ def run_lda(file_paths, save_path):
     files = FileLoader(file_paths)
     result_str = ""
     # 保存对应的结果
-    if files.mit_df is not None:
-        mit_result = LDAClassifyModel(files.mit_df, 'Mit')
-        mit_result.save_dict_to_csv_files(save_path, ptype='Mit')
-        mit_result.save_dict_to_images(save_path, ptype='Mit')
-        mit_result.save_result_image(save_path, "线粒体荧光表征值箱型图.png")
-        result_str += mit_result.result_str + '\n'
     if files.bf_df is not None:
         bf_result = LDAClassifyModel(files.bf_df, 'BF')
         bf_result.save_dict_to_csv_files(save_path, ptype='BF')
         bf_result.save_dict_to_images(save_path, ptype='BF')
         bf_result.save_result_image(save_path, "明场表征值箱型图.png")
         result_str += bf_result.result_str + '\n'
+    if files.mit_df is not None:
+        mit_result = LDAClassifyModel(files.mit_df, 'Mit')
+        mit_result.save_dict_to_csv_files(save_path, ptype='Mit')
+        mit_result.save_dict_to_images(save_path, ptype='Mit')
+        mit_result.save_result_image(save_path, "线粒体荧光表征值箱型图.png")
+        result_str += mit_result.result_str + '\n'
     if files.nuclei_df is not None:
         nuclei_result = LDAClassifyModel(files.nuclei_df, 'Nuclei')
         nuclei_result.save_dict_to_csv_files(save_path, ptype='Nuclei')
@@ -387,5 +399,5 @@ def run_lda(file_paths, save_path):
 
 
 if __name__ == '__main__':
-    paths = [r"C:\Code\python\csv_data\gl\20250412\BCLXL-BAK\BCLXL-FB_BF四种实验数据.csv"]
+    paths = [r"C:\Users\pengs\Downloads\FB_BF.csv"]
     run_lda(paths, 'C:/Users/pengs/Downloads')

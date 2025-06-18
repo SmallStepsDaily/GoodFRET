@@ -55,7 +55,10 @@ class FRETComputer:
                  G: float = 5.494216,
                  k: float = 0.432334,
                  expose_times: tuple = (300, 300, 300),
-                 output_redirector=Output()
+                 output_redirector=Output(),
+                 need_Ed=True,
+                 need_Rc=True,
+                 need_Fp=True,
                  ):
         """
         :param a: 校正因子a
@@ -95,6 +98,11 @@ class FRETComputer:
 
         # 判断是否需要根据亚细胞器进行FRET特征提取
         self.extract_organelle = True
+
+        # 特征类型选择
+        self.need_Ed = need_Ed
+        self.need_Rc = need_Rc
+        self.need_Fp = need_Fp
 
         # 命令行输出到文本框内
         self.output = output_redirector
@@ -162,7 +170,6 @@ class FRETComputer:
         # TODO 开始提取效率特征
         start_extraction = importlib.import_module(f'extracting.{self.fret_target_name}')
         result = start_extraction.start(self)
-
         print(f"FRET计算完成 ============================================> {sub_path}")
         self.output.append(f"FRET计算完成 ============================================> {sub_path}")
         return result
@@ -263,4 +270,5 @@ if __name__ == "__main__":
     fret = FRETComputer('bax_bak', expose_times=(300, 300, 300))
     # D:\data\20250412\BCLXL-BAK\MCF7-A133-2h-d1-c60μm\6
     # D:\data\20250412\BCLXL-BAK\MCF7-control-2h-d3-c0μm\4
-    fret.start(r'D:\data\20240614\MCF7-roi-2h-d1-c0.5μm\2')
+    # D:\data\20250513\BCLXL-BAK\MCF7-control-2h-d3-c0μm\10
+    fret.start(r'D:\data\20250513\BCLXL-BAK\MCF7-A133-2h-d2-c40μm\7')

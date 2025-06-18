@@ -281,8 +281,9 @@ class SD(FRETCharacterizationValue):
 
 
 if __name__ == '__main__':
-    data_df = pd.read_csv(r"C:/Code/python/csv_data/gl/20250412/BCLXL-BAK/FRET替换513对照组数据.csv")
+    data_df = pd.read_csv(r"D:\data\20250515\FRET.csv")
     sd_model = SD(data_df)
     # Cell_Ed_region_top_50_value
     values, result_str, image = sd_model.start(feature_name='Cell_Ed_region_top_50_value')
     save_base64_with_prefix(image, r"C:\Users\pengs\Downloads\test.png")
+    print(result_str)

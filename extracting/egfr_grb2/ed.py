@@ -5,8 +5,6 @@ from scipy import ndimage
 from scipy.ndimage import generate_binary_structure
 from skimage.feature import peak_local_max
 from skimage.measure import regionprops
-from tool.image import show_gray_image
-
 
 def min_max_normalize(image, target_min=0, target_max=255):
     """

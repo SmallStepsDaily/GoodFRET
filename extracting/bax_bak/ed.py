@@ -3,8 +3,6 @@ import numpy as np
 import pandas as pd
 from skimage.measure import regionprops
 
-from tool.image import show_gray_image
-
 """
 基于BAX靶点提取设计的FRET特征提取程序：
 1. 针对AA通道进行聚点分割操作
@@ -70,23 +68,27 @@ def count_single_cell_Ed(image_ed, image_rc, image_dd, image_da, image_aa, backg
         # 判断是否da通道满足大于三倍背景值的条件
         region_mask = filter_mask_by_intensity(region_mask, cell_image_da, background_noise_values['DA'])
 
+        # 保存到区域掩码中
+        # 将筛选得到的值放回原图像中
+        regions_mask[minr:maxr, minc:maxc] = region_mask
+
         # 筛选在符合Rc范围内的值
+        region_select_mask = region_mask.copy()
         # 创建RC图像的掩码（值在0到3之间的区域为True）
         rc_mask = (cell_image_rc >= rc_min) & (cell_image_rc <= rc_max)
+
+        # print(f"限制浓度比大小范围{rc_min}-{rc_max}")
         # 将原始mask与RC掩码相结合
-        region_mask[~rc_mask] = 0  # 将RC值不在范围内的区域置为0
+        region_select_mask[~rc_mask] = 0  # 将RC值不在范围内的区域置为0
 
         # 筛选在符合Ed范围内的值
         # 创建RC图像的掩码（值在0到3之间的区域为True）
         ed_mask = (cell_image_ed >= ed_min) & (cell_image_ed <= ed_max)
         # 将原始mask与RC掩码相结合
-        region_mask[~ed_mask] = 0  # 将RC值不在范围内的区域置为0
+        region_select_mask[~ed_mask] = 0  # 将RC值不在范围内的区域置为0
 
         # 筛选不符合区域大小的聚点
-        region_mask = filter_connected_components(region_mask)
-
-        # 将筛选得到的值放回原图像中
-        regions_mask[minr:maxr, minc:maxc] = region_mask
+        region_select_mask = filter_connected_components(region_select_mask)
 
         # 单细胞特征提取点 分别非0和存0两种图像进行采集
         cell_region_ed = cell_image_ed[cell_mask]
@@ -96,18 +98,18 @@ def count_single_cell_Ed(image_ed, image_rc, image_dd, image_da, image_aa, backg
             result[cell_id]['Ed_mean_value'] = cell_region_ed.mean().item()
             result[cell_id]['Ed_variance'] = np.var(cell_region_ed).item()
         else:
-            result[cell_id]['Ed_mean_value'] = 0
-            result[cell_id]['Ed_variance'] = 0
+            result[cell_id]['Ed_mean_value'] = np.nan
+            result[cell_id]['Ed_variance'] = np.nan
         if cell_not_zero_average_ed.size > 0:
             result[cell_id]['Ed_not_zero_mean_value'] = cell_not_zero_average_ed.mean().item()
             result[cell_id]['Ed_not_zero_variance'] = np.var(cell_not_zero_average_ed).item()
         else:
-            result[cell_id]['Ed_not_zero_mean_value'] = 0
-            result[cell_id]['Ed_not_zero_variance'] = 0
+            result[cell_id]['Ed_not_zero_mean_value'] = np.nan
+            result[cell_id]['Ed_not_zero_variance'] = np.nan
 
         # 计算种子点的效率值
-        region_ed = cell_image_ed[region_mask == 1]
-        not_region_ed = cell_image_ed[(region_mask == 0) & (cell_mask == 1)]
+        region_ed = cell_image_ed[region_select_mask == 1]
+        not_region_ed = cell_image_ed[(region_select_mask == 0) & (cell_mask == 1)]
         if region_ed.size > 0:
             result[cell_id]['Ed_region_mean_value'] = region_ed.mean().item()
             result[cell_id]['Ed_region_variance'] = np.var(region_ed).item()
@@ -116,12 +118,12 @@ def count_single_cell_Ed(image_ed, image_rc, image_dd, image_da, image_aa, backg
             result[cell_id]['Ed_region_top_50_value'] = top_50_percent_average(region_ed)
             result[cell_id]['Ed_region_top_25_value'] = top_25_percent_average(region_ed)
         else:
-            result[cell_id]['Ed_region_mean_value'] = 0
-            result[cell_id]['Ed_region_variance'] = 0
-            result[cell_id]['Ed_region_max_value'] = 0
-            result[cell_id]['Ed_region_min_value'] = 0
-            result[cell_id]['Ed_region_top_50_value'] = 0
-            result[cell_id]['Ed_region_top_25_value'] = 0
+            result[cell_id]['Ed_region_mean_value'] = np.nan
+            result[cell_id]['Ed_region_variance'] = np.nan
+            result[cell_id]['Ed_region_max_value'] = np.nan
+            result[cell_id]['Ed_region_min_value'] = np.nan
+            result[cell_id]['Ed_region_top_50_value'] = np.nan
+            result[cell_id]['Ed_region_top_25_value'] = np.nan
         if not_region_ed.size > 0:
             result[cell_id]['Ed_not_region_mean_value'] = not_region_ed.mean().item()
             result[cell_id]['Ed_not_region_variance'] = np.var(not_region_ed).item()
@@ -130,12 +132,12 @@ def count_single_cell_Ed(image_ed, image_rc, image_dd, image_da, image_aa, backg
             result[cell_id]['Ed_not_region_top_50_value'] = top_50_percent_average(not_region_ed)
             result[cell_id]['Ed_not_region_top_25_value'] = top_25_percent_average(not_region_ed)
         else:
-            result[cell_id]['Ed_not_region_mean_value'] = 0
-            result[cell_id]['Ed_not_region_variance'] = 0
-            result[cell_id]['Ed_not_region_max_value'] = 0
-            result[cell_id]['Ed_not_region_min_value'] = 0
-            result[cell_id]['Ed_not_region_top_50_value'] = 0
-            result[cell_id]['Ed_not_region_top_25_value'] = 0
+            result[cell_id]['Ed_not_region_mean_value'] = np.nan
+            result[cell_id]['Ed_not_region_variance'] = np.nan
+            result[cell_id]['Ed_not_region_max_value'] = np.nan
+            result[cell_id]['Ed_not_region_min_value'] = np.nan
+            result[cell_id]['Ed_not_region_top_50_value'] = np.nan
+            result[cell_id]['Ed_not_region_top_25_value'] = np.nan
         # print(str(result[cell_id]['Ed_region_variance']), "均值效率: ", result[cell_id]['Ed_region_mean_value'], " 前百分之50的效率值: ", result[cell_id]['Ed_not_region_top_50_value'])
     # 创建一个 DataFrame
     result_df = pd.DataFrame.from_dict(result, orient='index')

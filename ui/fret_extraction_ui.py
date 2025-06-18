@@ -1,7 +1,7 @@
 import sys
 import threading
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLineEdit, QPushButton, QFileDialog, \
-    QLabel, QTextEdit, QRadioButton, QButtonGroup, QGridLayout
+    QLabel, QTextEdit, QRadioButton, QButtonGroup, QGridLayout, QCheckBox
 
 from ui import TextUpdateHandler
 
@@ -117,10 +117,10 @@ class FRETExtractionUI(QWidget):
         middle_layout.addWidget(self.target_egfr_grb2, 1, 4)
         middle_layout.addWidget(self.target_bax_bak, 2, 4)
 
-        # 特征提取选择部分
-        feature_selection_label = QLabel("特征提取选择")
-        feature_selection_label.setStyleSheet("font-size: 24px;")
-        middle_layout.addWidget(feature_selection_label, 0, 6, 1, 2)
+        # 特征尺度选择部分
+        feature_scale_label = QLabel("特征尺度")
+        feature_scale_label.setStyleSheet("font-size: 24px;")
+        middle_layout.addWidget(feature_scale_label, 0, 5, 1, 2)
 
         self.extract_single_cell = QRadioButton("提取单细胞特征")
         self.extract_whole_image = QRadioButton("提取整图像特征")
@@ -130,8 +130,23 @@ class FRETExtractionUI(QWidget):
 
         self.extract_single_cell.setChecked(True)
 
-        middle_layout.addWidget(self.extract_single_cell, 1, 6)
-        middle_layout.addWidget(self.extract_whole_image, 2, 6)
+        middle_layout.addWidget(self.extract_single_cell, 1, 5)
+        middle_layout.addWidget(self.extract_whole_image, 2, 5)
+
+        # 特征类型选择部分
+        feature_selection_label = QLabel("特征选择")
+        feature_selection_label.setStyleSheet("font-size: 24px;")
+        middle_layout.addWidget(feature_selection_label, 0, 6, 1, 2)
+
+        self.Ed_feature = QCheckBox("FRET-Ed特征")
+        self.Rc_feature = QCheckBox("FRET-Rc特征")
+        self.Fp_feature = QCheckBox("FRET-Fp特征")
+        self.Ed_feature.setChecked(True)
+        self.Rc_feature.setChecked(True)
+        self.Fp_feature.setChecked(True)
+        middle_layout.addWidget(self.Ed_feature, 1, 6)
+        middle_layout.addWidget(self.Rc_feature, 2, 6)
+        middle_layout.addWidget(self.Fp_feature, 3, 6)
 
         # 运行日志标签和命令输出文本框的水平布局
         log_layout = QHBoxLayout()
@@ -208,6 +223,15 @@ class FRETExtractionUI(QWidget):
                 fret_target_name = 'bax_bak'
             if target_checked_button == self.target_egfr_grb2 and feature_checked_button == self.extract_single_cell:
                 fret_target_name = 'egfr_grb2'
+            need_Ed = False
+            need_Rc = False
+            need_Fp = False
+            if self.Ed_feature.isChecked():
+                need_Ed = True
+            if self.Rc_feature.isChecked():
+                need_Rc = True
+            if self.Fp_feature.isChecked():
+                need_Fp = True
             from extracting.compute import FRETComputer
             from batch.processing import BatchProcessing
             # 参数Ed提取参数 验证批处理流程
@@ -226,6 +250,9 @@ class FRETExtractionUI(QWidget):
                                 expose_times=(int(self.aa_input.text()),
                                               int(self.dd_input.text()),
                                               int(self.da_input.text())),
+                                need_Ed=need_Ed,
+                                need_Rc=need_Rc,
+                                need_Fp=need_Fp,
                                 output_redirector=output_redirector)
             batch = BatchProcessing(input_folder, stop_event=self.stop_event)
             batch.start(process, fret)

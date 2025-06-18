@@ -17,7 +17,7 @@ def show_gray_image(array, window_name='Gray Image', wait_time=0):
     # 确保输入数组是二维的
     if array.ndim != 2:
         raise ValueError("输入数组必须是二维的")
-
+    print(array.shape)
     # 转换数据类型为 uint8（OpenCV 灰度图像格式）
     if array.dtype != np.uint8:
         # 归一化到 0-255 范围
