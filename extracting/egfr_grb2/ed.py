@@ -50,9 +50,8 @@ def count_single_cell_Ed(image_ed, image_rc, image_dd, image_da, image_aa, backg
     # print("掩码最大值", mask.max())
     regions = regionprops(mask)
 
-    # 拿到0为背景，细胞区域为1的掩码图像
-    binary_mask = mask.copy()
-    binary_mask[binary_mask > 0] = 1
+    # 获取聚点掩码图像进行保存
+    agg_mask = np.zeros_like(mask, dtype=np.uint8)
 
     # 定义输出的结果
     result = {}
@@ -110,6 +109,9 @@ def count_single_cell_Ed(image_ed, image_rc, image_dd, image_da, image_aa, backg
         # 筛选不符合区域大小的聚点
         seeds_mask = filter_connected_components(seeds_mask)
 
+        # 存在合格的掩码
+        agg_mask[minr:maxr, minc:maxc] = seeds_mask
+
         # 获取前20的聚点进行分析
         seeds_mask = get_top_intensity_regions(seeds_mask, cell_image_normalize_dd, 50)
 
@@ -150,7 +152,7 @@ def count_single_cell_Ed(image_ed, image_rc, image_dd, image_da, image_aa, backg
         # print(result[cell_id]['Ed_agg_top_50_value'])
     # 创建一个 DataFrame
     result_df = pd.DataFrame.from_dict(result, orient='index')
-    return result_df
+    return result_df, seeds_mask
 
 
 def top_25_percent_average(arr):

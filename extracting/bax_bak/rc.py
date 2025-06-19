@@ -4,7 +4,7 @@
 import numpy as np
 import pandas as pd
 
-def count_single_cell_rc(cell_mask, regions_mask, image_rc, image_ed):
+def count_single_cell_rc(cell_mask, regions_mask, image_rc, image_ed, need_Rc_Ed=False):
     """
     统计单细胞区域内的RC和ED指标
 
@@ -83,46 +83,49 @@ def count_single_cell_rc(cell_mask, regions_mask, image_rc, image_ed):
 
     # 创建cell_rc_df
     cell_rc_df = pd.DataFrame(cell_rc_data, index=cell_ids)
-    # 2. 统计RC-ED关系
-    rc_ed_data = []
-    image_rc_max = (image_rc * np.where(cell_mask, 1, 0)).max()
-    MAX_RC_VALUE = image_rc_max
-    if MAX_RC_VALUE > 5:
-        MAX_RC_VALUE = 5
-    # 在0-MAX_RC_VALUE范围内以0.01为步长
-    for rc_value in np.arange(0, MAX_RC_VALUE + 0.01, 0.01):
-        rc_value = round(rc_value, 2)  # 避免浮点数精度问题
 
-        # 找出RC值在当前区间的像素
-        # 由于是连续值，使用范围±0.005
-        rc_pixels = np.logical_and(image_rc >= rc_value - 0.005, image_rc < rc_value + 0.005)
+    rc_ed_df = None
+    if need_Rc_Ed:
+        # 2. 统计RC-ED关系
+        rc_ed_data = []
+        image_rc_max = (image_rc * np.where(cell_mask, 1, 0)).max()
+        MAX_RC_VALUE = image_rc_max
+        if MAX_RC_VALUE > 5:
+            MAX_RC_VALUE = 5
+        # 在0-MAX_RC_VALUE范围内以0.01为步长
+        for rc_value in np.arange(0, MAX_RC_VALUE + 0.01, 0.01):
+            rc_value = round(rc_value, 2)  # 避免浮点数精度问题
 
-        if np.sum(rc_pixels) == 0:
-            # 如果没有像素在这个区间，记录为NaN
-            region_ed_mean = np.nan
-            cell_ed_mean = np.nan
-        else:
-            # 计算区域内的ED均值
-            region_pixels = np.logical_and(rc_pixels, regions_mask > 0)
-            if np.sum(region_pixels) > 0:
-                region_ed_mean = np.mean(image_ed[region_pixels])
-            else:
+            # 找出RC值在当前区间的像素
+            # 由于是连续值，使用范围±0.005
+            rc_pixels = np.logical_and(image_rc >= rc_value - 0.005, image_rc < rc_value + 0.005)
+
+            if np.sum(rc_pixels) == 0:
+                # 如果没有像素在这个区间，记录为NaN
                 region_ed_mean = np.nan
-
-            # 计算细胞内的ED均值
-            cell_pixels = np.logical_and(rc_pixels, cell_mask > 0)
-            if np.sum(cell_pixels) > 0:
-                cell_ed_mean = np.mean(image_ed[cell_pixels])
-            else:
                 cell_ed_mean = np.nan
+            else:
+                # 计算区域内的ED均值
+                region_pixels = np.logical_and(rc_pixels, regions_mask > 0)
+                if np.sum(region_pixels) > 0:
+                    region_ed_mean = np.mean(image_ed[region_pixels])
+                else:
+                    region_ed_mean = np.nan
 
-        # 保存结果
-        rc_ed_data.append({
-            'Rc': rc_value,
-            'Ed': region_ed_mean,
-            'cell_Ed': cell_ed_mean
-        })
+                # 计算细胞内的ED均值
+                cell_pixels = np.logical_and(rc_pixels, cell_mask > 0)
+                if np.sum(cell_pixels) > 0:
+                    cell_ed_mean = np.mean(image_ed[cell_pixels])
+                else:
+                    cell_ed_mean = np.nan
 
-    # 创建rc_ed_df
-    rc_ed_df = pd.DataFrame(rc_ed_data)
+            # 保存结果
+            rc_ed_data.append({
+                'Rc': rc_value,
+                'Ed': region_ed_mean,
+                'cell_Ed': cell_ed_mean
+            })
+
+        # 创建rc_ed_df
+        rc_ed_df = pd.DataFrame(rc_ed_data)
     return cell_rc_df, rc_ed_df

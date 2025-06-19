@@ -32,10 +32,6 @@ def count_single_cell_Ed(image_ed, image_rc, image_dd, image_da, image_aa, backg
     """
     regions = regionprops(mask)
 
-    # 拿到0为背景，细胞区域为1的掩码图像
-    binary_mask = mask.copy()
-    binary_mask[binary_mask > 0] = 1
-
     # 存放区域掩码图像
     regions_mask = np.zeros_like(mask, dtype=np.uint8)
 

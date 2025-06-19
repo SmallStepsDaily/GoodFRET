@@ -111,6 +111,7 @@ class BatchProcessing:
                     result_df = result_df[new_col_order]
                     # 将 Ed_df 拼接到当前批次的数据上
                     self.current_batch_data_df = pd.concat([self.current_batch_data_df, result_df], ignore_index=True)
+                # 二级文件，如果返回None则不执行保存报错
                 if rc_ed_df is not None:
                     # 保存基本信息到原有的文件上
                     rc_ed_df['Metadata_cell'] = self.current_Metadata_cell
@@ -130,7 +131,7 @@ class BatchProcessing:
 
         # 只有当 current_batch_data_df 不为空时才保存结果
         self.save_result()
-        print(f"完成怕批处理报错 ========================================================> {self.root}")
+        print(f"完成批处理操作 ========================================================> {self.root}")
 
     def save_result(self):
         """

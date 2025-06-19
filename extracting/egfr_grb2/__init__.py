@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import pandas as pd
+from tifffile import tifffile
 
 from extracting.compute import load_image_to_numpy
 from extracting.egfr_grb2.ed import count_single_cell_Ed
@@ -32,28 +33,38 @@ def start(fret):
 
     需要判断是否存在细胞核图像，决定是否掩码细胞核提取特征
     """
-    cell_ed_df = count_single_cell_Ed(image_ed=fret.image_Ed.numpy(),
-                                      image_rc=fret.image_Rc.numpy(),
-                                      image_dd=fret.image_DD.numpy(),
-                                      image_aa=fret.image_AA.numpy(),
-                                      image_da=fret.image_DA.numpy(),
+    image_ed = fret.image_Ed.numpy()
+    image_rc = fret.image_Rc.numpy()
+    image_dd = fret.image_DD.numpy()
+    image_aa = fret.image_AA.numpy()
+    image_da = fret.image_DA.numpy()
+    mask = fret.fret_mask.numpy()
+    cell_ed_df, seeds_mask = count_single_cell_Ed(image_ed=image_ed,
+                                      image_rc=image_rc,
+                                      image_dd=image_dd,
+                                      image_aa=image_aa,
+                                      image_da=image_da,
                                       background_noise_values = fret.background_noise_values,
-                                      mask=fret.fret_mask.numpy(),
+                                      mask=mask,
                                       rc_max=fret.rc_max,
                                       rc_min=fret.rc_min,
                                       ed_min=fret.ed_min,
                                       ed_max=fret.ed_max
                                       )
+    # 保存对应的聚点掩码图像
+    save_seeds_mask = seeds_mask * 125 + np.where(mask > 0, 1, 0) * 125
+    tifffile.imwrite(os.path.join(fret.current_sub_path, 'seeds_mask.tif'), save_seeds_mask.astype(np.uint8))
+
     cell_ed_df = cell_ed_df.add_prefix('Cell_')
     if fret.extract_organelle and os.path.exists(os.path.join(fret.current_sub_path, 'nmask.tif')):
         nuclei_mask = load_image_to_numpy(os.path.join(fret.current_sub_path, 'nmask.tif'), dtype=np.uint8)
         nuclei_mask, mit_mask = process_masks(fret.fret_mask.numpy(), nuclei_mask)
         print(f"细胞核区域数量{nuclei_mask.max()} 线粒体区域数量{mit_mask.max()}")
-        nuclei_ed_df = count_single_cell_Ed(image_ed=fret.image_Ed.numpy(),
-                                            image_rc=fret.image_Rc.numpy(),
-                                            image_dd=fret.image_DD.numpy(),
-                                            image_aa=fret.image_AA.numpy(),
-                                            image_da=fret.image_DA.numpy(),
+        nuclei_ed_df = count_single_cell_Ed(image_ed=image_ed,
+                                            image_rc=image_rc,
+                                            image_dd=image_dd,
+                                            image_aa=image_aa,
+                                            image_da=image_da,
                                             background_noise_values=fret.background_noise_values,
                                             mask=nuclei_mask,
                                             rc_max=fret.rc_max,
@@ -62,11 +73,11 @@ def start(fret):
                                             ed_max=fret.ed_max
                                             )
         nuclei_ed_df = nuclei_ed_df.add_prefix("Nuclei_")
-        mit_ed_df = count_single_cell_Ed(image_ed=fret.image_Ed.numpy(),
-                                         image_rc=fret.image_Rc.numpy(),
-                                         image_dd=fret.image_DD.numpy(),
-                                         image_aa=fret.image_AA.numpy(),
-                                         image_da=fret.image_DA.numpy(),
+        mit_ed_df = count_single_cell_Ed(image_ed=image_ed,
+                                         image_rc=image_rc,
+                                         image_dd=image_dd,
+                                         image_aa=image_aa,
+                                         image_da=image_da,
                                          background_noise_values=fret.background_noise_values,
                                          mask=mit_mask,
                                          rc_max=fret.rc_max,

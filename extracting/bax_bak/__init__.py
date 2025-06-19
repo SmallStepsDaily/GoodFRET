@@ -35,36 +35,45 @@ def start(fret):
 
     需要判断是否存在细胞核图像，决定是否掩码细胞核提取特征
     """
-    cell_ed_df = pd.DataFrame()
     cell_rc_df = pd.DataFrame()
     rc_ed_df = None
     cell_localization_df = pd.DataFrame()
-    if fret.need_Ed:
-        cell_ed_df, regions_mask = count_single_cell_Ed(image_ed=fret.image_Ed.numpy(),
-                                          image_rc=fret.image_Rc.numpy(),
-                                          image_dd=fret.image_DD.numpy(),
-                                          image_aa=fret.image_AA.numpy(),
-                                          image_da=fret.image_DA.numpy(),
-                                          background_noise_values = fret.background_noise_values,
-                                          mask=fret.fret_mask.numpy(),
-                                          rc_max=fret.rc_max,
-                                          rc_min=fret.rc_min,
-                                          ed_min=fret.ed_min,
-                                          ed_max=fret.ed_max)
-        # 保存区域掩码结果
-        tifffile.imwrite(os.path.join(fret.current_sub_path, 'regions_mask.tif'), regions_mask * 255)
-        cell_ed_df['ObjectNumber'] = cell_ed_df.index
-        columns = ['ObjectNumber'] + [col for col in cell_ed_df.columns if col != 'ObjectNumber']
-        # 按新顺序重新排列列
-        cell_ed_df = cell_ed_df.reindex(columns=columns)
-        print("效率特征")
+    image_ed = fret.image_Ed.numpy()
+    image_rc = fret.image_Rc.numpy()
+    image_dd = fret.image_DD.numpy()
+    image_aa = fret.image_AA.numpy()
+    image_da = fret.image_DA.numpy()
+    image_mask = fret.fret_mask.numpy()
+    # 掩码图像
+    cell_ed_df, regions_mask = count_single_cell_Ed(image_ed=image_ed,
+                                      image_rc=image_rc,
+                                      image_dd=image_dd,
+                                      image_aa=image_aa,
+                                      image_da=image_da,
+                                      background_noise_values = fret.background_noise_values,
+                                      mask=image_mask,
+                                      rc_max=fret.rc_max,
+                                      rc_min=fret.rc_min,
+                                      ed_min=fret.ed_min,
+                                      ed_max=fret.ed_max)
+    # 保存区域掩码结果
+    save_regions_mask = regions_mask * 125 + np.where(image_mask > 0, 1, 0) * 125
+    tifffile.imwrite(os.path.join(fret.current_sub_path, 'regions_mask.tif'), save_regions_mask.astype(np.uint8))
+
+    cell_ed_df['ObjectNumber'] = cell_ed_df.index
+    columns = ['ObjectNumber'] + [col for col in cell_ed_df.columns if col != 'ObjectNumber']
+    # 按新顺序重新排列列
+    cell_ed_df = cell_ed_df.reindex(columns=columns)
+    print("效率特征")
     if fret.need_Rc:
         cell_rc_df, rc_ed_df = count_single_cell_rc(cell_mask=fret.fret_mask.numpy(),
                                                     regions_mask=regions_mask,
                                                     image_rc=fret.image_Rc.numpy(),
-                                                    image_ed=fret.image_Ed.numpy())
-        # 保存rc-ed的结果值
-        rc_ed_df.to_csv(os.path.join(fret.current_sub_path, 'rc-ed.csv'))
+                                                    image_ed=fret.image_Ed.numpy(),
+                                                    need_Rc_Ed=fret.need_Rc_Ed)
+        if fret.need_Rc_Ed:
+            # 保存rc-ed的结果值
+            rc_ed_df.to_csv(os.path.join(fret.current_sub_path, 'rc-ed.csv'))
         print("浓度特征")
 
     if fret.need_Fp:

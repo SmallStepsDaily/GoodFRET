@@ -31,7 +31,7 @@ def count_single_cell_localization(image_dd, image_da, image_aa, mask, regions_m
     # 遍历每个细胞
     for cell_id in cell_ids:
         # 提取当前细胞的区域
-        cell_mask = (mask == cell_id).astype(np.uint8)
+        cell_mask = np.where(mask == cell_id, 1, 0)
 
         # 计算当前细胞的各项统计数据
         stats = calculate_cell_stats(image_dd, image_aa, cell_mask, regions_mask)
@@ -151,13 +151,15 @@ def calculate_cell_stats(image_dd, image_aa, cell_mask, regions_mask):
 
 def calculate_ratio(aa_values, dd_values):
     """计算AA/DD强度比，处理分母为零的情况"""
+    if dd_values is None:
+        return np.nan
     valid_indices = dd_values > 0
     return aa_values[valid_indices] / dd_values[valid_indices]
 
 
 def min_max_normalize(data, data_max, data_min, feature_range=(0, 1)):
     if len(data) == 0:
-        return None
+        return data
     """对输入数据进行Min-Max归一化"""
     if data_max == data_min:
         return np.full_like(data, feature_range[0])

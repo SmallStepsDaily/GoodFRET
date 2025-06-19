@@ -141,13 +141,16 @@ class FRETExtractionUI(QWidget):
         self.Ed_feature = QCheckBox("FRET-Ed特征")
         self.Rc_feature = QCheckBox("FRET-Rc特征")
         self.Fp_feature = QCheckBox("FRET-Fp特征")
+        self.Rc_Ed_feature = QCheckBox("统计Rc-Ed关系")
         self.Ed_feature.setChecked(True)
+        self.Ed_feature.setEnabled(False)
         self.Rc_feature.setChecked(True)
         self.Fp_feature.setChecked(True)
+        self.Rc_Ed_feature.setChecked(False)
         middle_layout.addWidget(self.Ed_feature, 1, 6)
         middle_layout.addWidget(self.Rc_feature, 2, 6)
         middle_layout.addWidget(self.Fp_feature, 3, 6)
-
+        middle_layout.addWidget(self.Rc_Ed_feature, 4, 6)
         # 运行日志标签和命令输出文本框的水平布局
         log_layout = QHBoxLayout()
         log_label = QLabel("运行日志")
@@ -226,12 +229,15 @@ class FRETExtractionUI(QWidget):
             need_Ed = False
             need_Rc = False
             need_Fp = False
+            need_Rc_Ed = False
             if self.Ed_feature.isChecked():
                 need_Ed = True
             if self.Rc_feature.isChecked():
                 need_Rc = True
             if self.Fp_feature.isChecked():
                 need_Fp = True
+            if self.Rc_Ed_feature.isChecked():
+                need_Rc_Ed = True
             from extracting.compute import FRETComputer
             from batch.processing import BatchProcessing
             # 参数Ed提取参数 验证批处理流程
@@ -253,6 +259,7 @@ class FRETExtractionUI(QWidget):
                                 need_Ed=need_Ed,
                                 need_Rc=need_Rc,
                                 need_Fp=need_Fp,
+                                need_Rc_Ed=need_Rc_Ed,
                                 output_redirector=output_redirector)
             batch = BatchProcessing(input_folder, stop_event=self.stop_event)
             batch.start(process, fret)

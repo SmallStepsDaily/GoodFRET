@@ -181,7 +181,7 @@ class JSDivergence(FRETCharacterizationValue):
         return f'data:image/png;base64,{image_data}'
 
 if __name__ == '__main__':
-    data_df = pd.read_csv(r'C:\Code\python\csv_data\gl\20250412\FRET.csv')
+    data_df = pd.read_csv(r"C:\Users\pengs\Desktop\qrm数据\Foxo3a\Foxo3a-4h.csv")
     jd_model = JSDivergence(data_df)
-    values, result_str, image = jd_model.start(feature_name='Cell_Ed_agg_top_50_value')
+    values, result_str, image = jd_model.start(feature_name='Foxo3a')
     print(result_str)

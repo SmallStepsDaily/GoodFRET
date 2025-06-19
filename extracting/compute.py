@@ -59,6 +59,7 @@ class FRETComputer:
                  need_Ed=True,
                  need_Rc=True,
                  need_Fp=True,
+                 need_Rc_Ed=False,
                  ):
         """
         :param a: 校正因子a
@@ -103,6 +104,7 @@ class FRETComputer:
         self.need_Ed = need_Ed
         self.need_Rc = need_Rc
         self.need_Fp = need_Fp
+        self.need_Rc_Ed = need_Rc_Ed
 
         # 命令行输出到文本框内
         self.output = output_redirector
