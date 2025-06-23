@@ -100,21 +100,21 @@ def count_single_cell_rc(cell_mask, regions_mask, image_rc, image_ed, need_Rc_Ed
             # 由于是连续值，使用范围±0.005
             rc_pixels = np.logical_and(image_rc >= rc_value - 0.005, image_rc < rc_value + 0.005)
 
-            if np.sum(rc_pixels) == 0:
-                # 如果没有像素在这个区间，记录为NaN
+            if np.sum(rc_pixels) < 30:
+                # 如果该像素数量小于30在这个区间，记录为NaN，说明是异常值
                 region_ed_mean = np.nan
                 cell_ed_mean = np.nan
             else:
                 # 计算区域内的ED均值
                 region_pixels = np.logical_and(rc_pixels, regions_mask > 0)
-                if np.sum(region_pixels) > 0:
+                if np.sum(region_pixels) >= 30:
                     region_ed_mean = np.mean(image_ed[region_pixels])
                 else:
                     region_ed_mean = np.nan
 
                 # 计算细胞内的ED均值
                 cell_pixels = np.logical_and(rc_pixels, cell_mask > 0)
-                if np.sum(cell_pixels) > 0:
+                if np.sum(cell_pixels) >= 50:
                     cell_ed_mean = np.mean(image_ed[cell_pixels])
                 else:
                     cell_ed_mean = np.nan

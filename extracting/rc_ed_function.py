@@ -2,264 +2,243 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
+from scipy import stats
+from sklearn.metrics import mean_squared_error, r2_score
+from scipy.stats import gaussian_kde
 import os
 
+'''
+rc-ed拟合算法
+1. 可以使用线性拟合和非线性拟合
+2. 输出{时间}-{干扰}-{浓度}的曲线图像
 
-# 定义非线性拟合函数
+待改进部分：
+1. 数据筛选，筛选不合理的数据
+'''
+
+# ================== Model definitions ==================
 def ed_nonlinear(rc, edmax, kd):
-    """非线性模型: E_D = E_{Dmax} × R_c / (K_d + R_c)"""
+    """Nonlinear model: Ed = edmax * Rc / (kd + Rc)"""
     return edmax * rc / (kd + rc)
 
 
-# 定义线性拟合函数（过原点）
-def ed_linear(rc, slope):
-    """线性模型: E_D = slope × R_c (过原点)"""
-    return slope * rc
+def ed_linear(rc, slope, intercept=0):
+    """Linear model: Ed = slope * Rc + intercept"""
+    return slope * rc + intercept
 
 
-# 拟合函数（支持非线性和线性模型）
-def fit_models(df, use_weighted=False):
-    """
-    对数据进行非线性和线性拟合，并比较模型性能
+def get_initial_params(x_data, y_data, model_type):
+    if model_type == 'nonlinear':
+        return [y_data.max(), np.median(x_data)]
+    elif model_type == 'linear':
+        slope, intercept, *_ = stats.linregress(x_data, y_data)
+        return [slope, intercept]
+    return [0.5, 0.5]
 
-    Returns:
-    - 非线性拟合结果: (popt, pcov, metrics) 或 None
-    - 线性拟合结果: (popt, pcov, metrics) 或 None
-    """
+
+# ================== Fitting function ==================
+def fit_models(df, fit_method='mean', use_intercept=False, force_nonlinear=False):
     df_clean = df.dropna(subset=['Rc', 'Ed'])
-
     if len(df_clean) < 3:
         return None, None
 
     x_data = df_clean['Rc'].values
     y_data = df_clean['Ed'].values
+    x_data = np.maximum(x_data, 1e-10)
 
-    # 处理RC=0的情况
-    if np.any(x_data == 0):
-        x_data = np.maximum(x_data, 1e-10)
+    if fit_method == 'mean':
+        unique_x = np.unique(x_data)
+        mean_y = np.array([np.mean(y_data[x_data == x]) for x in unique_x])
+        x_data = unique_x
+        y_data = mean_y
 
-    # 非线性拟合
+    # Nonlinear fit
     nonlin_result = None
     try:
-        nonlin_p0 = [0.5, 0.5]
-        nonlin_bounds = ([0, 0], [1, 1])
-        nonlin_weights = None
+        p0 = get_initial_params(x_data, y_data, 'nonlinear')
+        bounds = ([0, 0], [1, 1])
+        p0 = np.clip(p0, bounds[0], bounds[1])
 
-        if use_weighted:
-            unique_rc, counts = np.unique(x_data, return_counts=True)
-            rc_density = dict(zip(unique_rc, counts))
-            nonlin_weights = np.array([1 / rc_density[rc] for rc in x_data])
+        weights = None
+        if fit_method == 'weighted':
+            kde = gaussian_kde(x_data)
+            densities = np.maximum(kde(x_data), 1e-10)
+            weights = densities / densities.sum() * len(densities)
 
-        nonlin_popt, nonlin_pcov = curve_fit(
-            ed_nonlinear, x_data, y_data,
-            p0=nonlin_p0, bounds=nonlin_bounds, sigma=nonlin_weights
-        )
-
-        nonlin_y_fit = ed_nonlinear(x_data, *nonlin_popt)
-        nonlin_residuals = y_data - nonlin_y_fit
-        nonlin_ss_res = np.sum(nonlin_residuals ** 2)
-        nonlin_ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
-        nonlin_r2 = 1 - (nonlin_ss_res / nonlin_ss_tot)
-        nonlin_rmse = np.sqrt(nonlin_ss_res / len(y_data))
-
-        nonlin_result = (nonlin_popt, nonlin_pcov, {'R2': nonlin_r2, 'RMSE': nonlin_rmse})
+        popt, pcov = curve_fit(ed_nonlinear, x_data, y_data, p0=p0, bounds=bounds, sigma=weights)
+        y_fit = ed_nonlinear(x_data, *popt)
+        nonlin_result = (popt, pcov, {
+            'R2': r2_score(y_data, y_fit),
+            'RMSE': np.sqrt(mean_squared_error(y_data, y_fit))
+        })
     except Exception as e:
-        print(f"非线性拟合失败: {str(e)}")
+        print(f"Nonlinear fit failed: {e}")
 
-    # 线性拟合（过原点）
+    # Linear fit
     lin_result = None
-    try:
-        lin_p0 = [0.5]
-        lin_bounds = ([0], [1])  # slope范围0-1
+    if not force_nonlinear:
+        try:
+            if use_intercept:
+                p0 = get_initial_params(x_data, y_data, 'linear')
+                bounds = ([0, -1], [1, 1])
+                func = ed_linear
+            else:
+                p0 = [get_initial_params(x_data, y_data, 'linear')[0]]
+                bounds = ([0], [1])
+                func = lambda rc, slope: ed_linear(rc, slope, intercept=0)
 
-        lin_popt, lin_pcov = curve_fit(
-            ed_linear, x_data, y_data,
-            p0=lin_p0, bounds=lin_bounds
-        )
-
-        lin_y_fit = ed_linear(x_data, *lin_popt)
-        lin_residuals = y_data - lin_y_fit
-        lin_ss_res = np.sum(lin_residuals ** 2)
-        lin_ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
-        lin_r2 = 1 - (lin_ss_res / lin_ss_tot)
-        lin_rmse = np.sqrt(lin_ss_res / len(y_data))
-
-        lin_result = (lin_popt, lin_pcov, {'R2': lin_r2, 'RMSE': lin_rmse})
-    except Exception as e:
-        print(f"线性拟合失败: {str(e)}")
+            popt, pcov = curve_fit(func, x_data, y_data, p0=p0, bounds=bounds)
+            y_fit = func(x_data, *popt)
+            lin_result = (popt, pcov, {
+                'R2': r2_score(y_data, y_fit),
+                'RMSE': np.sqrt(mean_squared_error(y_data, y_fit))
+            })
+        except Exception as e:
+            print(f"Linear fit failed: {e}")
 
     return nonlin_result, lin_result
 
 
-# 绘制所有组的最优拟合曲线（只显示每个组的最佳模型）
-def plot_best_fits(group_results, output_path='best_fit_plot.png'):
-    """绘制每个组的最优拟合模型，减少图像混乱"""
-    plt.figure(figsize=(12, 8))
-    colors = plt.cm.tab20(np.linspace(0, 1, min(20, len(group_results))))
+# ================== Plotting functions ==================
+def plot_group_fits(group_results, output_dir):
+    """Plot individual group subplots: scatter + nonlinear fit curve with Edmax value in title"""
+    n = len(group_results)
+    cols = 3
+    rows = (n + cols - 1) // cols
+    plt.figure(figsize=(cols * 5, rows * 4))
 
-    # 分离control组和其他组
-    control_groups = []
-    other_groups = []
+    for i, (key, model, popt, metrics, x_data, y_data) in enumerate(group_results):
+        plt.subplot(rows, cols, i + 1)
+        plt.scatter(x_data, y_data, s=20, alpha=0.6, label='Data')
 
-    for i, (group_key, best_model, best_popt, best_metrics, x_data, y_data) in enumerate(group_results):
-        is_control = 'control' in group_key.lower()
-        group = (i, group_key, best_model, best_popt, best_metrics, x_data, y_data)
-        (control_groups if is_control else other_groups).append(group)
-
-    # 绘制control组，再绘制其他组
-    for i, (_, group_key, model, popt, metrics, x_data, y_data) in enumerate(control_groups + other_groups):
-        color = colors[i % len(colors)]
-
-        # 绘制原始数据点
-        plt.scatter(x_data, y_data, s=15, color=color, alpha=0.4, label=f'{group_key} (Data)')
-
-        # 绘制最优模型
-        x_fit = np.linspace(min(x_data), max(x_data), 100)
-        if model == "nonlinear":
-            edmax, kd = popt
-            y_fit = ed_nonlinear(x_fit, edmax, kd)
-            plt.plot(x_fit, y_fit, color=color, linewidth=2,
-                     label=f'Nonlinear: {group_key}, Edmax={edmax:.3f}, Kd={kd:.3f}')
-        elif model == "linear":
-            slope = popt[0]
-            y_fit = ed_linear(x_fit, slope)
-            plt.plot(x_fit, y_fit, color=color, linewidth=2,
-                     label=f'Linear: {group_key}, slope={slope:.3f}')
-
-    plt.xlabel('Rc')
-    plt.ylabel('Ed')
-    plt.title('Ed-Rc Fitting: Best Model for Each Group')
-    plt.grid(True, linestyle='--', alpha=0.7)
-
-    # 优化图例：分离control和其他组
-    handles, labels = plt.gca().get_legend_handles_labels()
-    control_handles, control_labels = [], []
-    other_handles, other_labels = [], []
-
-    for h, l in zip(handles, labels):
-        if 'control' in l.lower():
-            control_handles.append(h)
-            control_labels.append(l)
+        if model == 'nonlinear':
+            x_fit = np.linspace(min(x_data), max(x_data), 100)
+            y_fit = ed_nonlinear(x_fit, *popt)
+            plt.plot(x_fit, y_fit, 'r-', linewidth=2, label='Nonlinear Fit')
+            edmax_val = popt[0]
         else:
-            other_handles.append(h)
-            other_labels.append(l)
+            edmax_val = np.nan
 
-    # 合并图例：control在前，其他在后
-    plt.legend(control_handles + other_handles, control_labels + other_labels,
-               loc='best', ncol=1, fontsize=8)
+        plt.title(f"{key}\nR²={metrics['R2']:.3f}, RMSE={metrics['RMSE']:.3f}\nEdmax={edmax_val:.3f}")
+        plt.xlabel("Rc")
+        plt.ylabel("Ed")
+        plt.grid(True, linestyle='--', alpha=0.5)
+        plt.legend(fontsize=8)
 
     plt.tight_layout()
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    group_fit_path = os.path.join(output_dir, 'Rc-Ed_group_fit_subplots.png')
+    plt.savefig(group_fit_path, dpi=300)
     plt.close()
-    print(f"最优拟合图已保存至 {output_path}")
+    print(f"Group fit subplots saved to {group_fit_path}")
 
 
-# 主函数：处理CSV并选择最优模型
-def process_csv_with_best_model(file_path, output_path, use_weighted=True):
-    """处理CSV并为每个组选择最优拟合模型"""
-    df = pd.read_csv(file_path)
-    df = df.dropna(subset=['Rc', 'Ed'])
-    required_columns = ['Metadata_hour', 'Metadata_treatment', 'Metadata_concentration', 'Rc', 'Ed']
-    missing_columns = [col for col in required_columns if col not in df.columns]
-    if missing_columns:
-        raise ValueError(f"缺少必要列: {', '.join(missing_columns)}")
+def plot_overall_fits(group_results, output_dir):
+    """Plot all groups combined: all scatter points + nonlinear fit curves with Edmax values in legend"""
+    plt.figure(figsize=(12, 8))
+    colors = plt.cm.tab20(np.linspace(0, 1, len(group_results)))
+
+    for i, (key, model, popt, metrics, x_data, y_data) in enumerate(group_results):
+        color = colors[i]
+        plt.scatter(x_data, y_data, s=15, alpha=0.3, color=color, label=f"{key} Data")
+        if model == 'nonlinear':
+            x_fit = np.linspace(min(x_data), max(x_data), 100)
+            y_fit = ed_nonlinear(x_fit, *popt)
+            edmax_val = popt[0]
+            plt.plot(x_fit, y_fit, color=color, linewidth=2, label=f"{key} Fit (Edmax={edmax_val:.3f})")
+        else:
+            plt.plot([], [], color=color, label=f"{key} Fit (No nonlinear)")
+
+    plt.xlabel("Rc")
+    plt.ylabel("Ed")
+    plt.title("Combined Nonlinear Fits Across Groups")
+    plt.grid(True, linestyle='--', alpha=0.5)
+    plt.legend(fontsize=8, ncol=2)
+    plt.tight_layout()
+    overall_fit_path = os.path.join(output_dir, 'Rc-Ed_overall_fit_plot.png')
+    plt.savefig(overall_fit_path, dpi=300)
+    plt.close()
+    print(f"Overall fit plot saved to {overall_fit_path}")
+
+
+# ================== Main processing function ==================
+def process_csv_with_best_model(file_path, output_path, fit_method='mean', use_intercept=False, force_nonlinear=False):
+    df = pd.read_csv(file_path).dropna(subset=['Rc', 'Ed'])
+    required = ['Metadata_hour', 'Metadata_treatment', 'Metadata_concentration', 'Rc', 'Ed']
+    if not all(col in df.columns for col in required):
+        raise ValueError("Missing required columns")
 
     results = []
-    group_results = []  # 存储用于绘图的数据（组名、最优模型、参数等）
-
+    group_results = []
     grouped = df.groupby(['Metadata_hour', 'Metadata_treatment', 'Metadata_concentration'])
 
-    for (hour, treatment, conc), group_df in grouped:
+    for (hour, treatment, conc), gdf in grouped:
         key = f'{hour}h-{treatment}-{conc}um'
-        print(f"处理组: {key} (n={len(group_df)})")
+        nonlin, lin = fit_models(gdf, fit_method, use_intercept, force_nonlinear)
 
-        # 执行两种模型的拟合
-        nonlin_result, lin_result = fit_models(group_df, use_weighted=use_weighted)
-
-        # 选择最优模型
-        best_model = None
-        best_popt = None
-        best_metrics = None
-
-        if nonlin_result and lin_result:
-            # 比较两种模型
-            nonlin_r2, nonlin_rmse = nonlin_result[2]['R2'], nonlin_result[2]['RMSE']
-            lin_r2, lin_rmse = lin_result[2]['R2'], lin_result[2]['RMSE']
-
-            # R²越高且RMSE越低，模型越好
-            nonlin_score = nonlin_r2 - nonlin_rmse
-            lin_score = lin_r2 - lin_rmse
-
-            if nonlin_score > lin_score:
-                best_model = "nonlinear"
-                best_popt, _, best_metrics = nonlin_result
-            else:
-                best_model = "linear"
-                best_popt, _, best_metrics = lin_result
-        elif nonlin_result:
+        if force_nonlinear and nonlin:
             best_model = "nonlinear"
-            best_popt, _, best_metrics = nonlin_result
-        elif lin_result:
-            best_model = "linear"
-            best_popt, _, best_metrics = lin_result
+            popt, _, metrics = nonlin
+        elif not force_nonlinear:
+            if nonlin and lin:
+                n = len(gdf)
+                aic_nonlin = n * np.log(nonlin[2]['RMSE']) + 4
+                aic_lin = n * np.log(lin[2]['RMSE']) + (4 if use_intercept else 2)
+                best_model = 'nonlinear' if aic_nonlin < aic_lin else 'linear'
+                popt, _, metrics = nonlin if best_model == 'nonlinear' else lin
+            elif nonlin:
+                best_model, popt, _, metrics = 'nonlinear', *nonlin
+            elif lin:
+                best_model, popt, _, metrics = 'linear', *lin
+            else:
+                continue
         else:
-            print(f"两组模型均拟合失败: {key}")
             continue
 
-        # 保存结果
         results.append({
             'Key': key,
-            'Metadata_hour': hour,
-            'Metadata_treatment': treatment,
-            'Metadata_concentration': conc,
+            'Hour': hour,
+            'Treatment': treatment,
+            'Concentration': conc,
             'Best_Model': best_model,
-            # 非线性模型参数（如果是最优模型）
-            'Nonlin_Edmax': nonlin_result[0][0] if (best_model == "nonlinear" and nonlin_result) else np.nan,
-            'Nonlin_Kd': nonlin_result[0][1] if (best_model == "nonlinear" and nonlin_result) else np.nan,
-            'Nonlin_R2': nonlin_result[2]['R2'] if nonlin_result else np.nan,
-            'Nonlin_RMSE': nonlin_result[2]['RMSE'] if nonlin_result else np.nan,
-            # 线性模型参数（如果是最优模型）
-            'Lin_Slope': lin_result[0][0] if (best_model == "linear" and lin_result) else np.nan,
-            'Lin_R2': lin_result[2]['R2'] if lin_result else np.nan,
-            'Lin_RMSE': lin_result[2]['RMSE'] if lin_result else np.nan,
-            'Data_points': len(group_df)
+            'Edmax': popt[0] if best_model == 'nonlinear' else np.nan,
+            'Kd': popt[1] if best_model == 'nonlinear' else np.nan,
+            'Slope': popt[0] if best_model == 'linear' else np.nan,
+            'Intercept': popt[1] if (use_intercept and best_model == 'linear') else 0,
+            'R2': metrics['R2'],
+            'RMSE': metrics['RMSE'],
+            'N': len(gdf)
         })
 
-        # 保存绘图数据
-        group_results.append((
-            key,
-            best_model,
-            best_popt,
-            best_metrics,
-            group_df['Rc'].values,
-            group_df['Ed'].values
-        ))
+        group_results.append((key, best_model, popt, metrics, gdf['Rc'].values, gdf['Ed'].values))
 
-    # 绘制最优拟合图
-    if group_results:
-        plot_best_fits(group_results, f'{output_path}/best_fit_plot.png')
+    results_df = pd.DataFrame(results)
+    os.makedirs(output_path, exist_ok=True)
+    results_df.to_csv(os.path.join(output_path, 'Rc-Ed_fit_results.csv'), index=False)
+    print(f"Fit results saved to {output_path}/fit_results.csv")
 
-    # 保存结果到CSV
-    if results:
-        results_df = pd.DataFrame(results)
-        os.makedirs(output_path, exist_ok=True)
-        results_df.to_csv(f'{output_path}/best_fitting_results.csv', index=False)
-        print(f"结果已保存至 {output_path}/best_fitting_results.csv")
-        return results_df
+    # Plotting
+    plot_group_fits(group_results, output_path)
+    plot_overall_fits(group_results, output_path)
 
-    return None
+    return results_df, group_results
 
 
-# 主程序入口
+# ================== Main entry point ==================
+def main():
+    csv_path = r"C:\Code\python\csv_data\gl\20250515\BCLXL-BAK/rc_ed.csv"
+    output_dir = r"C:/Users/pengs/Downloads"
+
+    print("Starting model fitting and evaluation...")
+    results, group_results = process_csv_with_best_model(
+        csv_path,
+        output_dir,
+        fit_method='weighted',
+        use_intercept=False,
+        force_nonlinear=True
+    )
+    print("Done.")
+    print(results[['Key', 'Best_Model', 'R2', 'RMSE', 'N']])
+
+
 if __name__ == "__main__":
-    csv_file = r'C:\Code\python\csv_data\gl\20250513\BCLXL-BAK/rc_ed.csv'  # 替换为实际文件路径
-    output_path = r"C:\Users\pengs\Downloads"  # 替换为输出路径
-
-    results = process_csv_with_best_model(csv_file, output_path, use_weighted=True)
-
-    if results is not None and not results.empty:
-        print("\n=== 最优模型摘要 ===")
-        print(results[['Key', 'Best_Model', 'Nonlin_R2', 'Lin_R2', 'Data_points']])
-    else:
-        print("未获得有效拟合结果。")
+    main()

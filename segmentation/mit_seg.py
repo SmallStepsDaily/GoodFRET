@@ -14,7 +14,7 @@ warnings.filterwarnings("ignore", category=FutureWarning, message=".*You are usi
 
 class MitSegmentation(Segmentation):
     """
-    线粒体和nuclei两通道组合图像进行分割
+    线粒体通道组合图像进行分割
     """
     def __init__(self,
                  seg_diameter=200,

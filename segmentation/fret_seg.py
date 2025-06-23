@@ -64,8 +64,8 @@ class FRETSegmentation(Segmentation):
         for i in range(0, image.shape[0]):
             # 下采样到 512x512
             image_np = cv2.resize(image[i, :, :], (512, 512), interpolation=cv2.INTER_AREA)
+            # image_np = cv2.GaussianBlur(image_np, (3, 3), 1.1)
             image_np = clahe.apply(image_np)
-            image_np = cv2.GaussianBlur(image_np, (3, 3), 1.1)
             # show_gray_image(image_np)
             merged_image[:, :, i] = image_np
 
@@ -80,8 +80,8 @@ class FRETSegmentation(Segmentation):
         masks, flows, styles = self.seg_model.eval(image_np,
                                                    channels=self.channel,
                                                    diameter=self.seg_diameter / self.factor,
-                                                   flow_threshold=0.8,
-                                                   cellprob_threshold=-0.5,
+                                                   flow_threshold=0.4,
+                                                   cellprob_threshold=0,
                                                    normalize=True)
         # show_gray_image(masks)
         masks_filtered = filter_labeled_masks_by_diameter(masks,
@@ -158,4 +158,4 @@ class FRETSegmentation(Segmentation):
 
 if __name__ == '__main__':
     nuclei = FRETSegmentation()
-    nuclei.start(r'D:\data\20250513\BCLXL-BAK\MCF7-control-2h-d3-c0μm\4')
+    nuclei.start(r'D:\data\20250513\BCLXL-BAK\MCF7-A133-6h-d2-c40μm\7')

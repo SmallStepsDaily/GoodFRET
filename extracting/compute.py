@@ -190,8 +190,8 @@ class FRETComputer:
             region_pixels = image_ED[label_mask]
             non_zero_count = torch.sum(region_pixels > 0)
             total_pixels = region_pixels.numel()
-
-            if non_zero_count <= total_pixels * 0.3:
+            # 需要满足有效效率区域大于百分之50的情况，否则容易存在噪声
+            if non_zero_count <= total_pixels * 0.5:
                 filtered_mask[label_mask] = 0
             else:
                 filtered_mask[label_mask] = new_label
@@ -266,11 +266,11 @@ class FRETComputer:
 
 if __name__ == "__main__":
     # EGFR 靶点验证
-    # fret = FRETComputer('egfr_grb2', expose_times=(300, 300, 300))
-    # fret.start(r'D:\data\hql\2025.04.30 fret hoechst mito BF\H1975-control-2h-d1-c0μm\21')
+    fret = FRETComputer('egfr_grb2', expose_times=(300, 300, 300))
+    fret.start(r'D:\data\hql\2025.05.26 fret hoechst mito BF\H1975-Osi-2h-d4-c4μm\9')
     # BAX 靶点验证
-    fret = FRETComputer('bax_bak', expose_times=(300, 300, 300))
-    # D:\data\20250412\BCLXL-BAK\MCF7-A133-2h-d1-c60μm\6
-    # D:\data\20250412\BCLXL-BAK\MCF7-control-2h-d3-c0μm\4
-    # D:\data\20250513\BCLXL-BAK\MCF7-control-2h-d3-c0μm\10
-    fret.start(r'D:\data\20250513\BCLXL-BAK\MCF7-A133-2h-d2-c40μm\7')
+    # fret = FRETComputer('bax_bak', expose_times=(300, 300, 300))
+    # # D:\data\20250412\BCLXL-BAK\MCF7-A133-2h-d1-c60μm\6
+    # # D:\data\20250412\BCLXL-BAK\MCF7-control-2h-d3-c0μm\4
+    # # D:\data\20250513\BCLXL-BAK\MCF7-control-2h-d3-c0μm\10
+    # fret.start(r'D:\data\20250515\BCLXL\MCF7-A199-6h-d1-c90μm\7')

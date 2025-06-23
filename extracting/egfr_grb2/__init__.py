@@ -51,16 +51,15 @@ def start(fret):
                                       ed_min=fret.ed_min,
                                       ed_max=fret.ed_max
                                       )
-    # 保存对应的聚点掩码图像
-    save_seeds_mask = seeds_mask * 125 + np.where(mask > 0, 1, 0) * 125
-    tifffile.imwrite(os.path.join(fret.current_sub_path, 'seeds_mask.tif'), save_seeds_mask.astype(np.uint8))
 
     cell_ed_df = cell_ed_df.add_prefix('Cell_')
+    nuclei_seeds_mask = None
+    mit_seeds_mask = None
     if fret.extract_organelle and os.path.exists(os.path.join(fret.current_sub_path, 'nmask.tif')):
         nuclei_mask = load_image_to_numpy(os.path.join(fret.current_sub_path, 'nmask.tif'), dtype=np.uint8)
         nuclei_mask, mit_mask = process_masks(fret.fret_mask.numpy(), nuclei_mask)
         print(f"细胞核区域数量{nuclei_mask.max()} 线粒体区域数量{mit_mask.max()}")
-        nuclei_ed_df = count_single_cell_Ed(image_ed=image_ed,
+        nuclei_ed_df, nuclei_seeds_mask = count_single_cell_Ed(image_ed=image_ed,
                                             image_rc=image_rc,
                                             image_dd=image_dd,
                                             image_aa=image_aa,
@@ -73,7 +72,7 @@ def start(fret):
                                             ed_max=fret.ed_max
                                             )
         nuclei_ed_df = nuclei_ed_df.add_prefix("Nuclei_")
-        mit_ed_df = count_single_cell_Ed(image_ed=image_ed,
+        mit_ed_df, mit_seeds_mask = count_single_cell_Ed(image_ed=image_ed,
                                          image_rc=image_rc,
                                          image_dd=image_dd,
                                          image_aa=image_aa,
@@ -90,6 +89,13 @@ def start(fret):
         merged_df['ObjectNumber'] = merged_df.index
     else:
         merged_df = cell_ed_df
+    if nuclei_seeds_mask is None and mit_seeds_mask is None:
+        # 保存对应的聚点掩码图像
+        save_seeds_mask = seeds_mask * 125 + np.where(mask > 0, 1, 0) * 125
+    else:
+        save_seeds_mask = seeds_mask * 50 + nuclei_seeds_mask * 50 + mit_seeds_mask * 60 + np.where(mask > 0, 1, 0) * 50
+    tifffile.imwrite(os.path.join(fret.current_sub_path, 'seeds_mask.tif'), save_seeds_mask.astype(np.uint8))
+
     merged_df['ObjectNumber'] = merged_df.index
     columns = ['ObjectNumber'] + [col for col in merged_df.columns if col != 'ObjectNumber']
     # 按新顺序重新排列列

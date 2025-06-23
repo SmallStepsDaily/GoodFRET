@@ -112,7 +112,7 @@ def count_single_cell_Ed(image_ed, image_rc, image_dd, image_da, image_aa, backg
         # 存在合格的掩码
         agg_mask[minr:maxr, minc:maxc] = seeds_mask
 
-        # 获取前20的聚点进行分析
+        # 获取前50的聚点进行分析
         seeds_mask = get_top_intensity_regions(seeds_mask, cell_image_normalize_dd, 50)
 
         # 单细胞特征提取点 分别非0和存0两种图像进行采集
@@ -123,14 +123,14 @@ def count_single_cell_Ed(image_ed, image_rc, image_dd, image_da, image_aa, backg
             result[cell_id]['Ed_mean_value'] = cell_region_ed.mean().item()
             result[cell_id]['Ed_variance'] = np.var(cell_region_ed).item()
         else:
-            result[cell_id]['Ed_mean_value'] = 0
-            result[cell_id]['Ed_variance'] = 0
+            result[cell_id]['Ed_mean_value'] = np.nan
+            result[cell_id]['Ed_variance'] = np.nan
         if cell_not_zero_average_ed.size > 0:
             result[cell_id]['Ed_not_zero_mean_value'] = cell_not_zero_average_ed.mean().item()
             result[cell_id]['Ed_not_zero_variance'] = np.var(cell_not_zero_average_ed).item()
         else:
-            result[cell_id]['Ed_not_zero_mean_value'] = 0
-            result[cell_id]['Ed_not_zero_variance'] = 0
+            result[cell_id]['Ed_not_zero_mean_value'] = np.nan
+            result[cell_id]['Ed_not_zero_variance'] = np.nan
 
         # 计算种子点的效率值
         seed_region_ed = cell_image_ed[seeds_mask == 1]
@@ -142,17 +142,17 @@ def count_single_cell_Ed(image_ed, image_rc, image_dd, image_da, image_aa, backg
             result[cell_id]['Ed_agg_top_50_value'] = top_50_percent_average(seed_region_ed)
             result[cell_id]['Ed_agg_top_25_value'] = top_25_percent_average(seed_region_ed)
         else:
-            result[cell_id]['Ed_agg_mean_value'] = 0
-            result[cell_id]['Ed_agg_variance'] = 0
-            result[cell_id]['Ed_agg_max_value'] = 0
-            result[cell_id]['Ed_agg_min_value'] = 0
-            result[cell_id]['Ed_agg_top_50_value'] = 0
-            result[cell_id]['Ed_agg_top_25_value'] = 0
+            result[cell_id]['Ed_agg_mean_value'] = np.nan
+            result[cell_id]['Ed_agg_variance'] = np.nan
+            result[cell_id]['Ed_agg_max_value'] = np.nan
+            result[cell_id]['Ed_agg_min_value'] = np.nan
+            result[cell_id]['Ed_agg_top_50_value'] = np.nan
+            result[cell_id]['Ed_agg_top_25_value'] = np.nan
         # 验证输出的ed是否正确
         # print(result[cell_id]['Ed_agg_top_50_value'])
     # 创建一个 DataFrame
     result_df = pd.DataFrame.from_dict(result, orient='index')
-    return result_df, seeds_mask
+    return result_df, agg_mask
 
 
 def top_25_percent_average(arr):
