@@ -12,13 +12,8 @@ class CSVFeatureMerger:
             phenotype_dir: str,
             fret_file: str,
             output_dir: str,
-            match_columns: List[str] = [
-                "Metadata_hour", "Metadata_treatment", "Metadata_site",
-                "Metadata_dish", "Metadata_concentration", "ObjectNumber"
-            ],
-            fret_columns: List[str] = [
-                "Ed_region_mean_value", "Rc_region_mean", "FRET_Judge", "Near_Ed"
-            ],
+            match_columns=None,
+            fret_columns=None,
             file_pattern: str = "*.csv",
             verbose: bool = True
     ):
@@ -34,6 +29,16 @@ class CSVFeatureMerger:
             file_pattern: 表型特征文件的匹配模式
             verbose: 是否显示详细日志
         """
+        if fret_columns is None:
+            fret_columns = [
+                "Ed_region_mean_value", "Rc_region_mean", "FRET_Judge", "Near_Ed"
+            ]
+        if match_columns is None:
+            # TODO 还可以添加 Metadata_dish
+            match_columns = [
+                "Metadata_hour", "Metadata_treatment", "Metadata_site",
+                "Metadata_concentration", "ObjectNumber"
+            ]
         self.phenotype_dir = phenotype_dir
         self.fret_file = fret_file
         self.output_dir = output_dir
@@ -197,13 +202,13 @@ def merge_feature_files(
     if match_columns is None:
         match_columns = [
             "Metadata_hour", "Metadata_treatment", "Metadata_site",
-            "Metadata_dish", "Metadata_concentration", "ObjectNumber"
+            "Metadata_concentration", "ObjectNumber"
         ]
 
     # 设置默认FRET列
     if fret_columns is None:
         fret_columns = [
-            "Ed_region_mean_value", "Rc_region_mean", "FRET_Judge", "Near_Ed"
+            "Ed_region_mean_value", "Rc_region_mean", 'Fp_region_PCC', 'FRET_Judge', "Near_Ed"
         ]
 
     # 创建并运行合并器
@@ -222,9 +227,9 @@ def merge_feature_files(
 
 if __name__ == "__main__":
     # 使用示例
-    PHENOTYPE_DIR = "path/to/phenotype/files"  # 表型特征文件目录
-    FRET_FILE = "path/to/fret/file.csv"  # FRET特征文件路径
-    OUTPUT_DIR = "path/to/output/files"  # 输出目录
+    PHENOTYPE_DIR = r"C:\Code\python\csv_data\gl\20250513\BCLXL-BAK\表型表征值"  # 表型特征文件目录
+    FRET_FILE = r"C:\Code\python\csv_data\gl\20250513\BCLXL-BAK\Rc-Ed_FRET_analyzed.csv"  # FRET特征文件路径
+    OUTPUT_DIR = r"C:\Users\pengs\Downloads"  # 输出目录
 
     # 运行合并操作
     results = merge_feature_files(

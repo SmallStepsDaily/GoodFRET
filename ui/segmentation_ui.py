@@ -121,6 +121,14 @@ class SegmentationUI(QWidget):
         nuclei_max_diameter_layout.addWidget(self.nuclei_max_diameter_input)
         right_layout.addLayout(nuclei_max_diameter_layout)
 
+        image_weight_label = QLabel("AA与DD通道融合比例:  ")
+        self.image_weight_input = QLineEdit()
+        self.image_weight_input.setText("0.5")
+        image_weight_layout = QHBoxLayout()
+        image_weight_layout.addWidget(image_weight_label)
+        image_weight_layout.addWidget(self.image_weight_input)
+        right_layout.addLayout(image_weight_layout)
+
         middle_layout.addLayout(right_layout, 1)
 
         main_layout.addLayout(middle_layout)
@@ -189,10 +197,15 @@ class SegmentationUI(QWidget):
                 print("执行 FRET 三通道的分割操作")
                 output_redirector.append("执行 FRET 三通道的分割操作")
                 from segmentation.fret_seg import FRETSegmentation
+                weight = float(self.image_weight_input.text())
+                if 1 < weight < 0:
+                    # weight权重不符合，强制设定为0.5
+                    weight = 0.5
                 model = FRETSegmentation(
                     seg_diameter=int(self.cell_diameter_input.text()),
                     seg_min_diameter=int(self.cell_min_diameter_input.text()),
                     seg_max_diameter=int(self.cell_max_diameter_input.text()),
+                    weight=weight,
                     output_redirector=output_redirector
                 )
 

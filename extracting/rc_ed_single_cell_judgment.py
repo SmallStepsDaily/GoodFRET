@@ -48,7 +48,7 @@ def analyze_fret_data(input_file, output_file=None, save_plot=True, plot_file=No
     metadata_columns = [col for col in df.columns if col.startswith('Metadata_') or col == 'ObjectNumber']
 
     # 检查所需的特征列是否存在
-    required_features = ['Ed_region_mean_value', 'Rc_region_mean']
+    required_features = ['Ed_region_mean_value', 'Rc_region_mean', 'Fp_region_PCC']
     for feature in required_features:
         if feature not in df.columns:
             print(f"错误: 数据中缺少必要的列 '{feature}'")
@@ -153,5 +153,5 @@ def plot_fret_analysis(rc_values, ed_values, control_pred, drug_pred, judge_resu
 
 if __name__ == "__main__":
     # 示例用法
-    input_csv = r"C:\Code\python\csv_data\gl\20250513\BCLXL-BAK\FRET.csv"  # 替换为你的 CSV 文件路径
+    input_csv = r"C:\Code\python\csv_data\gl\20250513\BCLXL-BAK\FRET-RC0.5-2.5.csv"  # 替换为你的 CSV 文件路径
     analyze_fret_data(input_csv, save_plot=True)

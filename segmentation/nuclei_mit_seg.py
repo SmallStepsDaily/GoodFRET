@@ -6,6 +6,8 @@ import numpy as np
 import tifffile as tiff
 from segmentation.seg import Segmentation, filter_labeled_masks_by_diameter, normalize_image
 from cellpose import models
+
+from tool.image import show_gray_image
 from ui import Output
 
 # 忽略特定的 UserWarning
@@ -32,11 +34,11 @@ class MitNucleiSegmentation(Segmentation):
         self.seg_diameter = seg_diameter
         self.seg_min_diameter = seg_min_diameter
         self.seg_max_diameter = seg_max_diameter
-        self.seg_model = models.Cellpose(gpu=True, model_type='cyto3')
+        self.seg_model = models.CellposeModel(gpu=True)
         self.seg_nuclei_diameter = seg_nuclei_diameter
         self.seg_nuclei_min_diameter = seg_nuclei_min_diameter
         self.seg_nuclei_max_diameter = seg_nuclei_max_diameter
-        self.seg_nuclei_model = models.Cellpose(gpu=True, model_type='nuclei')
+        self.seg_nuclei_model = models.CellposeModel(gpu=True)
 
     def start(self, path):
         try:
@@ -81,11 +83,9 @@ class MitNucleiSegmentation(Segmentation):
 
 
     def seg_mit_nuclei(self, image_np, factor):
-        masks, flows, styles, diams = self.seg_model.eval(image_np,
+        masks, flows, styles = self.seg_model.eval(image_np,
                                                           diameter=self.seg_diameter / factor,
-                                                          channels=[1, 2],
-                                                          flow_threshold=0.4,
-                                                          resample=True)
+                                                          flow_threshold=0.4)
         # show_gray_image(masks)
         masks_filtered = filter_labeled_masks_by_diameter(masks,
                                                           min_diameter=self.seg_min_diameter / factor,
@@ -93,10 +93,9 @@ class MitNucleiSegmentation(Segmentation):
         return masks_filtered
 
     def seg_nuclei(self, image_np, factor):
-        masks, flows, styles, diams = self.seg_nuclei_model.eval(image_np,
+        masks, flows, styles = self.seg_nuclei_model.eval(image_np,
                                                                     diameter=self.seg_nuclei_diameter / factor,
-                                                                    channels=[0, 0],
-                                                                    flow_threshold=0.8,)
+                                                                    flow_threshold=0.4,)
         masks_filtered = filter_labeled_masks_by_diameter(masks,
                                                           min_diameter=self.seg_nuclei_min_diameter / factor,
                                                           max_diameter=self.seg_nuclei_max_diameter / factor)
@@ -117,7 +116,8 @@ class MitNucleiSegmentation(Segmentation):
         nuclei_mask_np = self.seg_nuclei(image_np[:, :, 1], self.factor)
 
         mit_mask_np, nuclei_mask_np = self.common_mask(mit_mask_np, nuclei_mask_np)
-
+        show_gray_image(nuclei_mask_np)
+        show_gray_image(mit_mask_np)
         # 还原掩码到原始尺寸
         mit_mask_np = cv2.resize(mit_mask_np.astype(np.uint8), (self.original_width, self.original_height),
                                      interpolation=cv2.INTER_NEAREST).astype(np.uint8)

@@ -71,9 +71,9 @@ def start(fret):
                                                     image_rc=fret.image_Rc.numpy(),
                                                     image_ed=fret.image_Ed.numpy(),
                                                     need_Rc_Ed=fret.need_Rc_Ed)
-        if fret.need_Rc_Ed:
+        if fret.need_Rc_Ed and rc_ed_df is not None:
             # 保存rc-ed的结果值
-            rc_ed_df.to_csv(os.path.join(fret.current_sub_path, 'rc-ed.csv'))
+            rc_ed_df.to_csv(os.path.join(fret.current_sub_path, 'rc-ed.csv'), index=False)
         print("浓度特征")
 
     if fret.need_Fp:

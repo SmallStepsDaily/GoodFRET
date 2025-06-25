@@ -110,7 +110,7 @@ def count_single_cell_Ed(image_ed, image_rc, image_dd, image_da, image_aa, backg
         seeds_mask = filter_connected_components(seeds_mask)
 
         # 存在合格的掩码
-        agg_mask[minr:maxr, minc:maxc] = seeds_mask
+        agg_mask[minr:maxr, minc:maxc] = seeds_mask | agg_mask[minr:maxr, minc:maxc]
 
         # 获取前50的聚点进行分析
         seeds_mask = get_top_intensity_regions(seeds_mask, cell_image_normalize_dd, 50)

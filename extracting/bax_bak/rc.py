@@ -27,7 +27,7 @@ def count_single_cell_rc(cell_mask, regions_mask, image_rc, image_ed, need_Rc_Ed
 
     # 初始化结果列表
     cell_rc_data = []
-
+    rc_ed_data = []
     # 1. 统计每个细胞的RC指标
     for cell_id in cell_ids:
         # 获取当前细胞的掩码
@@ -81,51 +81,60 @@ def count_single_cell_rc(cell_mask, regions_mask, image_rc, image_ed, need_Rc_Ed
             'Rc_non_region_var': non_region_var
         })
 
+        '''
+        开始计算Rc-Ed之间的关联
+        '''
+        if need_Rc_Ed:
+            cell_ed_values = image_ed[cell]
+            region_ed_values = image_ed[region]
+            MAX_RC_VALUE = np.max(cell_rc_values)
+            MIN_RC_VALUE = np.min(cell_rc_values)
+            if MAX_RC_VALUE > 8:
+                MAX_RC_VALUE = 8
+            # 在0-MAX_RC_VALUE范围内以0.01为步长
+            for rc_value in np.arange(MIN_RC_VALUE, MAX_RC_VALUE + 0.1, 0.1):
+                rc_value = round(rc_value, 1)  # 避免浮点数精度问题
+
+                # 找出RC值在当前区间的像素
+                # 由于是连续值，使用范围±0.05
+                cell_pixels = np.logical_and(cell_rc_values >= rc_value - 0.05, cell_rc_values < rc_value + 0.05)
+                region_pixels = np.logical_and(region_rc_values >= rc_value - 0.05, region_rc_values < rc_value + 0.05)
+                Cell_pixels_sum = np.sum(cell_pixels)
+                Region_pixels_sum = np.sum(region_pixels)
+                if np.sum(cell_pixels) < 5:
+                    # 如果该像素数量小于30在这个区间，记录为NaN，说明是异常值
+                    region_ed_mean = np.nan
+                    cell_ed_mean = np.nan
+                else:
+                    # 计算区域内的ED均值
+                    if Region_pixels_sum >= 5:
+                        region_ed_mean = np.mean(region_ed_values[region_pixels])
+                    else:
+                        region_ed_mean = np.nan
+
+                    # 计算细胞内的ED均值
+                    if Cell_pixels_sum >= 10:
+                        cell_ed_mean = np.mean(cell_ed_values[cell_pixels])
+                    else:
+                        cell_ed_mean = np.nan
+
+                # 保存结果
+                rc_ed_data.append({
+                    'ObjectNumber': cell_id,
+                    'Rc': rc_value,
+                    'Region_Ed': region_ed_mean,
+                    'Region_pixels_sum': Region_pixels_sum,
+                    'Cell_Ed': cell_ed_mean,
+                    'Cell_pixels_sum': Cell_pixels_sum,
+                })
+
     # 创建cell_rc_df
     cell_rc_df = pd.DataFrame(cell_rc_data, index=cell_ids)
-
-    rc_ed_df = None
-    if need_Rc_Ed:
-        # 2. 统计RC-ED关系
-        rc_ed_data = []
-        image_rc_max = (image_rc * np.where(cell_mask, 1, 0)).max()
-        MAX_RC_VALUE = image_rc_max
-        if MAX_RC_VALUE > 5:
-            MAX_RC_VALUE = 5
-        # 在0-MAX_RC_VALUE范围内以0.01为步长
-        for rc_value in np.arange(0, MAX_RC_VALUE + 0.01, 0.01):
-            rc_value = round(rc_value, 2)  # 避免浮点数精度问题
-
-            # 找出RC值在当前区间的像素
-            # 由于是连续值，使用范围±0.005
-            rc_pixels = np.logical_and(image_rc >= rc_value - 0.005, image_rc < rc_value + 0.005)
-
-            if np.sum(rc_pixels) < 30:
-                # 如果该像素数量小于30在这个区间，记录为NaN，说明是异常值
-                region_ed_mean = np.nan
-                cell_ed_mean = np.nan
-            else:
-                # 计算区域内的ED均值
-                region_pixels = np.logical_and(rc_pixels, regions_mask > 0)
-                if np.sum(region_pixels) >= 30:
-                    region_ed_mean = np.mean(image_ed[region_pixels])
-                else:
-                    region_ed_mean = np.nan
-
-                # 计算细胞内的ED均值
-                cell_pixels = np.logical_and(rc_pixels, cell_mask > 0)
-                if np.sum(cell_pixels) >= 50:
-                    cell_ed_mean = np.mean(image_ed[cell_pixels])
-                else:
-                    cell_ed_mean = np.nan
-
-            # 保存结果
-            rc_ed_data.append({
-                'Rc': rc_value,
-                'Ed': region_ed_mean,
-                'cell_Ed': cell_ed_mean
-            })
-
+    if need_Rc_Ed and len(rc_ed_data) > 0:
         # 创建rc_ed_df
         rc_ed_df = pd.DataFrame(rc_ed_data)
-    return cell_rc_df, rc_ed_df
+        # print(rc_ed_df)
+        return cell_rc_df, rc_ed_df
+    return cell_rc_df, None
+
+

@@ -3,6 +3,8 @@ import numpy as np
 import pandas as pd
 from skimage.measure import regionprops
 
+from tool.image import show_gray_image
+
 """
 基于BAX靶点提取设计的FRET特征提取程序：
 1. 针对AA通道进行聚点分割操作
@@ -21,7 +23,7 @@ def min_max_normalize(image):
         return (image * 255).astype(np.uint8)
 
     normalized = (image - min_val) / (max_val - min_val) * 255
-    normalized = np.clip(normalized, 1, 255).astype(np.uint8)
+    normalized = np.clip(normalized, 0, 255).astype(np.uint8)
     return normalized
 
 def count_single_cell_Ed(image_ed, image_rc, image_dd, image_da, image_aa, background_noise_values, mask, rc_min=0.0, rc_max=0.5, ed_min=0.0, ed_max=1.0):
@@ -66,7 +68,7 @@ def count_single_cell_Ed(image_ed, image_rc, image_dd, image_da, image_aa, backg
 
         # 保存到区域掩码中
         # 将筛选得到的值放回原图像中
-        regions_mask[minr:maxr, minc:maxc] = region_mask
+        regions_mask[minr:maxr, minc:maxc] = region_mask | regions_mask[minr:maxr, minc:maxc]
 
         # 筛选在符合Rc范围内的值
         region_select_mask = region_mask.copy()
@@ -84,7 +86,7 @@ def count_single_cell_Ed(image_ed, image_rc, image_dd, image_da, image_aa, backg
         region_select_mask[~ed_mask] = 0  # 将RC值不在范围内的区域置为0
 
         # 筛选不符合区域大小的聚点
-        region_select_mask = filter_connected_components(region_select_mask)
+        region_select_mask = filter_connected_components(region_select_mask, min_size=20)
 
         # 单细胞特征提取点 分别非0和存0两种图像进行采集
         cell_region_ed = cell_image_ed[cell_mask]
@@ -135,6 +137,9 @@ def count_single_cell_Ed(image_ed, image_rc, image_dd, image_da, image_aa, backg
             result[cell_id]['Ed_not_region_top_50_value'] = np.nan
             result[cell_id]['Ed_not_region_top_25_value'] = np.nan
         # print(str(result[cell_id]['Ed_region_variance']), "均值效率: ", result[cell_id]['Ed_region_mean_value'], " 前百分之50的效率值: ", result[cell_id]['Ed_not_region_top_50_value'])
+    # 筛选合格的连通区域进行掩码获取
+    regions_mask = filter_connected_components(regions_mask, min_size=100)
+
     # 创建一个 DataFrame
     result_df = pd.DataFrame.from_dict(result, orient='index')
     return result_df, regions_mask
@@ -183,7 +188,7 @@ def filter_mask_by_intensity(seeds_mask, image_aa, aa_value, background_factor=2
     参数:
         seeds_mask: 原始掩码图像 (numpy数组，二值图像，非零值表示掩码区域)
         image_aa: 用于筛选的强度图像 (numpy数组，与seeds_mask尺寸相同)
-        aa_value: 强度阈值系数，筛选条件为 强度 > 3*aa_value
+        aa_value: 强度阈值系数，筛选条件为 强度 > 2*aa_value
 
     返回:
         filtered_mask: 筛选后的新掩码图像 (二值图像，满足条件的区域为1，其余为0)
@@ -226,14 +231,14 @@ def region_segmentation(image_dd):
     cell_image = image_dd * cell_mask
 
     # 仅在细胞区域内计算Otsu阈值
-    cell_pixels = cell_image[cell_image > cell_image.mean()]
+    cell_pixels = cell_image[cell_image > 0]
 
     if cell_pixels.size == 0:  # 防止所有细胞像素都被滤波为0
         return np.zeros_like(image_dd, dtype=np.uint8)
 
     # 计算细胞区域的Otsu阈值
     otsu_threshold, _ = cv2.threshold(
-        cell_pixels, 155, 255,
+        cell_pixels, 1, 255,
         cv2.THRESH_BINARY + cv2.THRESH_OTSU
     )
 
@@ -244,7 +249,7 @@ def region_segmentation(image_dd):
     return global_mask
 
 
-def filter_connected_components(segmented_image, min_size=10):
+def filter_connected_components(segmented_image, min_size=30):
     """
     筛选连通组件，移除面积小于min_size的区域。
 

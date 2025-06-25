@@ -59,7 +59,7 @@ class FRETComputer:
                  need_Ed=True,
                  need_Rc=True,
                  need_Fp=True,
-                 need_Rc_Ed=False,
+                 need_Rc_Ed=True,
                  ):
         """
         :param a: 校正因子a
@@ -266,11 +266,11 @@ class FRETComputer:
 
 if __name__ == "__main__":
     # EGFR 靶点验证
-    fret = FRETComputer('egfr_grb2', expose_times=(300, 300, 300))
-    fret.start(r'D:\data\hql\2025.05.26 fret hoechst mito BF\H1975-Osi-2h-d4-c4μm\9')
+    # fret = FRETComputer('egfr_grb2', expose_times=(300, 300, 300))
+    # fret.start(r'D:\data\hql\2025.05.26 fret hoechst mito BF\H1975-Osi-2h-d4-c4μm\9')
     # BAX 靶点验证
-    # fret = FRETComputer('bax_bak', expose_times=(300, 300, 300))
+    fret = FRETComputer('bax_bak', expose_times=(300, 300, 300))
     # # D:\data\20250412\BCLXL-BAK\MCF7-A133-2h-d1-c60μm\6
     # # D:\data\20250412\BCLXL-BAK\MCF7-control-2h-d3-c0μm\4
     # # D:\data\20250513\BCLXL-BAK\MCF7-control-2h-d3-c0μm\10
-    # fret.start(r'D:\data\20250515\BCLXL\MCF7-A199-6h-d1-c90μm\7')
+    fret.start(r'D:\data\20250513\BCLXL-BAK\MCF7-A133-4h-d1-c80μm\7')

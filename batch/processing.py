@@ -126,6 +126,7 @@ class BatchProcessing:
                     other_cols = [col for col in rc_ed_df.columns if not col.startswith('Metadata_')]
                     new_col_order = metadata_cols + other_cols
                     rc_ed_df = rc_ed_df[new_col_order]
+
                     # 将 Ed_df 拼接到当前批次的数据上
                     self.current_batch_rc_ed_df = pd.concat([self.current_batch_rc_ed_df, rc_ed_df], ignore_index=True)
 
@@ -153,5 +154,5 @@ if __name__ == "__main__":
 
 
     fret = FRETComputer('bax_bak')
-    batch = BatchProcessing(r'D:\data\20250513\BCLXL-BAK')
+    batch = BatchProcessing(r'C:\Users\pengs\Downloads\test')
     batch.start(process, fret)
