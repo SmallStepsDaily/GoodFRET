@@ -38,12 +38,11 @@ class FRETExtractionUI(QWidget):
 
         # FRET 图像参数部分
         fret_param_label = QLabel("FRET 图像参数")
-        fret_param_label.setStyleSheet("font-size: 24px;")
+        fret_param_label.setStyleSheet("font-size: 30px;")
         middle_layout.addWidget(fret_param_label, 0, 0, 1, 2)
 
         # AA 曝光时间
         aa_label = QLabel("AA 曝光时间 (ms):")
-        aa_label.setStyleSheet("font-size: 18px;")
         self.aa_input = QLineEdit()
         self.aa_input.setText("300")
         middle_layout.addWidget(aa_label, 1, 0)
@@ -51,7 +50,6 @@ class FRETExtractionUI(QWidget):
 
         # DD 曝光时间
         dd_label = QLabel("DD 曝光时间 (ms):")
-        dd_label.setStyleSheet("font-size: 18px;")
         self.dd_input = QLineEdit()
         self.dd_input.setText("300")
         middle_layout.addWidget(dd_label, 2, 0)
@@ -59,7 +57,6 @@ class FRETExtractionUI(QWidget):
 
         # DA 曝光时间
         da_label = QLabel("DA 曝光时间 (ms):")
-        da_label.setStyleSheet("font-size: 18px;")
         self.da_input = QLineEdit()
         self.da_input.setText("300")
         middle_layout.addWidget(da_label, 3, 0)
@@ -67,12 +64,11 @@ class FRETExtractionUI(QWidget):
 
         # RC/ED 筛选参数部分
         rc_ed_param_label = QLabel("RC/ED 筛选参数")
-        rc_ed_param_label.setStyleSheet("font-size: 24px;")
+        rc_ed_param_label.setStyleSheet("font-size: 30px;")
         middle_layout.addWidget(rc_ed_param_label, 0, 2, 1, 2)
 
         # rc 最小值
         rc_min_label = QLabel("rc 最小值:")
-        rc_min_label.setStyleSheet("font-size: 18px;")
         self.rc_min_input = QLineEdit()
         self.rc_min_input.setText("0.0")
         middle_layout.addWidget(rc_min_label, 1, 2)
@@ -80,7 +76,6 @@ class FRETExtractionUI(QWidget):
 
         # rc 最大值
         rc_max_label = QLabel("rc 最大值:")
-        rc_max_label.setStyleSheet("font-size: 18px;")
         self.rc_max_input = QLineEdit()
         self.rc_max_input.setText("2.5")
         middle_layout.addWidget(rc_max_label, 2, 2)
@@ -88,7 +83,6 @@ class FRETExtractionUI(QWidget):
 
         # ed 最小值
         ed_min_label = QLabel("ed 最小值:")
-        ed_min_label.setStyleSheet("font-size: 18px;")
         self.ed_min_input = QLineEdit()
         self.ed_min_input.setText("0.0")
         middle_layout.addWidget(ed_min_label, 3, 2)
@@ -96,7 +90,6 @@ class FRETExtractionUI(QWidget):
 
         # ed 最大值
         ed_max_label = QLabel("ed 最大值:")
-        ed_max_label.setStyleSheet("font-size: 18px;")
         self.ed_max_input = QLineEdit()
         self.ed_max_input.setText("1.0")
         middle_layout.addWidget(ed_max_label, 4, 2)
@@ -104,7 +97,7 @@ class FRETExtractionUI(QWidget):
 
         # 靶点选择部分
         target_selection_label = QLabel("靶点选择")
-        target_selection_label.setStyleSheet("font-size: 24px;")
+        target_selection_label.setStyleSheet("font-size: 30px;")
         middle_layout.addWidget(target_selection_label, 0, 4, 1, 2)
 
         self.target_egfr_grb2 = QRadioButton("egfr_grb2")
@@ -119,7 +112,7 @@ class FRETExtractionUI(QWidget):
 
         # 特征尺度选择部分
         feature_scale_label = QLabel("特征尺度")
-        feature_scale_label.setStyleSheet("font-size: 24px;")
+        feature_scale_label.setStyleSheet("font-size: 30px;")
         middle_layout.addWidget(feature_scale_label, 0, 5, 1, 2)
 
         self.extract_single_cell = QRadioButton("提取单细胞特征")
@@ -135,7 +128,7 @@ class FRETExtractionUI(QWidget):
 
         # 特征类型选择部分
         feature_selection_label = QLabel("特征选择")
-        feature_selection_label.setStyleSheet("font-size: 24px;")
+        feature_selection_label.setStyleSheet("font-size: 30px;")
         middle_layout.addWidget(feature_selection_label, 0, 6, 1, 2)
 
         self.Ed_feature = QCheckBox("FRET-Ed特征")
@@ -153,8 +146,8 @@ class FRETExtractionUI(QWidget):
         middle_layout.addWidget(self.Rc_Ed_feature, 4, 6)
         # 运行日志标签和命令输出文本框的水平布局
         log_layout = QHBoxLayout()
-        log_label = QLabel("运行日志")
-        log_label.setStyleSheet("font-size: 24px;")
+        log_label = QLabel("运行\n日志")
+        log_label.setStyleSheet("font-size: 30px;")
         self.output_text = QTextEdit()
         self.text_handler = TextUpdateHandler(self.output_text)
         self.output_text.setReadOnly(True)

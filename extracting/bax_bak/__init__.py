@@ -66,10 +66,10 @@ def start(fret):
     cell_ed_df = cell_ed_df.reindex(columns=columns)
     print("效率特征")
     if fret.need_Rc:
-        cell_rc_df, rc_ed_df = count_single_cell_rc(cell_mask=fret.fret_mask.numpy(),
+        cell_rc_df, rc_ed_df = count_single_cell_rc(cell_mask=image_mask,
                                                     regions_mask=regions_mask,
-                                                    image_rc=fret.image_Rc.numpy(),
-                                                    image_ed=fret.image_Ed.numpy(),
+                                                    image_rc=image_rc,
+                                                    image_ed=image_ed,
                                                     need_Rc_Ed=fret.need_Rc_Ed)
         if fret.need_Rc_Ed and rc_ed_df is not None:
             # 保存rc-ed的结果值
@@ -78,10 +78,10 @@ def start(fret):
 
     if fret.need_Fp:
         # 提取共定位信息
-        cell_localization_df = count_single_cell_localization(image_dd=fret.image_DD.numpy(),
-                                       image_aa=fret.image_AA.numpy(),
-                                       image_da=fret.image_DA.numpy(),
-                                       mask=fret.fret_mask.numpy(),
+        cell_localization_df = count_single_cell_localization(image_dd=image_dd,
+                                       image_aa=image_aa,
+                                       image_da=image_da,
+                                       mask=image_mask,
                                        regions_mask=regions_mask)
         # 提取溶度比信息，获取浓度比对应的rc-ed图像
         print("共定位特征")

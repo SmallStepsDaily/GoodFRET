@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 from tifffile import tifffile
 
+from extracting.bax_bak import count_single_cell_rc, count_single_cell_localization
 from extracting.compute import load_image_to_numpy
 from extracting.egfr_grb2.ed import count_single_cell_Ed
 
@@ -52,54 +53,90 @@ def start(fret):
                                       ed_max=fret.ed_max
                                       )
 
-    cell_ed_df = cell_ed_df.add_prefix('Cell_')
-    nuclei_seeds_mask = None
-    mit_seeds_mask = None
-    if fret.extract_organelle and os.path.exists(os.path.join(fret.current_sub_path, 'nmask.tif')):
-        nuclei_mask = load_image_to_numpy(os.path.join(fret.current_sub_path, 'nmask.tif'), dtype=np.uint8)
-        nuclei_mask, mit_mask = process_masks(fret.fret_mask.numpy(), nuclei_mask)
-        print(f"细胞核区域数量{nuclei_mask.max()} 线粒体区域数量{mit_mask.max()}")
-        nuclei_ed_df, nuclei_seeds_mask = count_single_cell_Ed(image_ed=image_ed,
-                                            image_rc=image_rc,
-                                            image_dd=image_dd,
-                                            image_aa=image_aa,
-                                            image_da=image_da,
-                                            background_noise_values=fret.background_noise_values,
-                                            mask=nuclei_mask,
-                                            rc_max=fret.rc_max,
-                                            rc_min=fret.rc_min,
-                                            ed_min=fret.ed_min,
-                                            ed_max=fret.ed_max
-                                            )
-        nuclei_ed_df = nuclei_ed_df.add_prefix("Nuclei_")
-        mit_ed_df, mit_seeds_mask = count_single_cell_Ed(image_ed=image_ed,
-                                         image_rc=image_rc,
-                                         image_dd=image_dd,
-                                         image_aa=image_aa,
-                                         image_da=image_da,
-                                         background_noise_values=fret.background_noise_values,
-                                         mask=mit_mask,
-                                         rc_max=fret.rc_max,
-                                         rc_min=fret.rc_min,
-                                         ed_min=fret.ed_min,
-                                         ed_max=fret.ed_max
-                                         )
-        mit_ed_df = mit_ed_df.add_prefix("Mit_")
-        merged_df = pd.concat([cell_ed_df, nuclei_ed_df, mit_ed_df], axis=1)
-        merged_df['ObjectNumber'] = merged_df.index
-    else:
-        merged_df = cell_ed_df
-    if nuclei_seeds_mask is None and mit_seeds_mask is None:
-        # 保存对应的聚点掩码图像
-        save_seeds_mask = seeds_mask * 125 + np.where(mask > 0, 1, 0) * 125
-    else:
-        save_seeds_mask = seeds_mask * 50 + nuclei_seeds_mask * 50 + mit_seeds_mask * 60 + np.where(mask > 0, 1, 0) * 50
-    tifffile.imwrite(os.path.join(fret.current_sub_path, 'seeds_mask.tif'), save_seeds_mask.astype(np.uint8))
+    cell_ed_df = cell_ed_df.add_prefix('Ed_')
+    print("效率特征")
 
+    # 设置保存文件
+    # 保存分析数据情况
+    merged_df = cell_ed_df
     merged_df['ObjectNumber'] = merged_df.index
     columns = ['ObjectNumber'] + [col for col in merged_df.columns if col != 'ObjectNumber']
     # 按新顺序重新排列列
     merged_df = merged_df.reindex(columns=columns)
+    # 设置共定位特征文件和rc特征文件
+    cell_localization_df = pd.DataFrame()
+    cell_rc_df = pd. DataFrame()
+
+    # 该通过亚细胞器区域进行划分的操作存在争议，后续验证 TODO
+    # nuclei_seeds_mask = None
+    # mit_seeds_mask = None
+    # if fret.extract_organelle and os.path.exists(os.path.join(fret.current_sub_path, 'nmask.tif')):
+    #     nuclei_mask = load_image_to_numpy(os.path.join(fret.current_sub_path, 'nmask.tif'), dtype=np.uint8)
+    #     nuclei_mask, mit_mask = process_masks(fret.fret_mask.numpy(), nuclei_mask)
+    #     print(f"细胞核区域数量{nuclei_mask.max()} 线粒体区域数量{mit_mask.max()}")
+    #     nuclei_ed_df, nuclei_seeds_mask = count_single_cell_Ed(image_ed=image_ed,
+    #                                         image_rc=image_rc,
+    #                                         image_dd=image_dd,
+    #                                         image_aa=image_aa,
+    #                                         image_da=image_da,
+    #                                         background_noise_values=fret.background_noise_values,
+    #                                         mask=nuclei_mask,
+    #                                         rc_max=fret.rc_max,
+    #                                         rc_min=fret.rc_min,
+    #                                         ed_min=fret.ed_min,
+    #                                         ed_max=fret.ed_max
+    #                                         )
+    #     nuclei_ed_df = nuclei_ed_df.add_prefix("Nuclei_")
+    #     mit_ed_df, mit_seeds_mask = count_single_cell_Ed(image_ed=image_ed,
+    #                                      image_rc=image_rc,
+    #                                      image_dd=image_dd,
+    #                                      image_aa=image_aa,
+    #                                      image_da=image_da,
+    #                                      background_noise_values=fret.background_noise_values,
+    #                                      mask=mit_mask,
+    #                                      rc_max=fret.rc_max,
+    #                                      rc_min=fret.rc_min,
+    #                                      ed_min=fret.ed_min,
+    #                                      ed_max=fret.ed_max
+    #                                      )
+    #     mit_ed_df = mit_ed_df.add_prefix("Mit_")
+    #     merged_df = pd.concat([cell_ed_df, nuclei_ed_df, mit_ed_df], axis=1)
+    #     merged_df['ObjectNumber'] = merged_df.index
+    # else:
+    #     merged_df = cell_ed_df
+    # if nuclei_seeds_mask is None and mit_seeds_mask is None:
+    #     # 保存对应的聚点掩码图像
+    #     save_seeds_mask = seeds_mask * 125 + np.where(mask > 0, 1, 0) * 125
+    # else:
+    #     save_seeds_mask = seeds_mask * 50 + nuclei_seeds_mask * 50 + mit_seeds_mask * 60 + np.where(mask > 0, 1, 0) * 50
+
+    # 保存种子点图像
+    save_seeds_mask = seeds_mask * 125 + np.where(mask > 0, 1, 0) * 125
+    tifffile.imwrite(os.path.join(fret.current_sub_path, 'seeds_mask.tif'), save_seeds_mask.astype(np.uint8))
+
+    if fret.need_Rc:
+        cell_rc_df, rc_ed_df = count_single_cell_rc(cell_mask=mask,
+                                                    regions_mask=seeds_mask,
+                                                    image_rc=image_rc,
+                                                    image_ed=image_ed,
+                                                    need_Rc_Ed=fret.need_Rc_Ed)
+        if fret.need_Rc_Ed and rc_ed_df is not None:
+            # 保存rc-ed的结果值
+            rc_ed_df.to_csv(os.path.join(fret.current_sub_path, 'rc-ed.csv'), index=False)
+        print("浓度特征")
+
+    if fret.need_Fp:
+        # 提取共定位信息
+        cell_localization_df = count_single_cell_localization(image_dd=image_dd,
+                                       image_aa=image_aa,
+                                       image_da=image_da,
+                                       mask=mask,
+                                       regions_mask=seeds_mask)
+        # 提取溶度比信息，获取浓度比对应的rc-ed图像
+        print("共定位特征")
+
+    # 直接按列合并
+    merged_df = pd.concat([cell_ed_df, cell_localization_df, cell_rc_df], axis=1)
     return merged_df
 
 

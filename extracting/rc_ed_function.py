@@ -2,9 +2,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
-from scipy import stats
 from sklearn.metrics import mean_squared_error, r2_score
-from scipy.stats import gaussian_kde
 import os
 
 '''
@@ -34,7 +32,7 @@ def fit_models(df, fit_method='mean'):
 
     x_data = df_clean['Rc'].values
     y_data = df_clean['Region_Ed'].values
-    pixel_weights = df_clean['Region_pixels_sum'].values
+    pixel_weights = np.sqrt(df_clean['Region_pixels_sum'].values)
     x_data = np.maximum(x_data, 1e-10)
 
     if fit_method == 'mean':
@@ -163,7 +161,8 @@ def process_csv_with_best_model(file_path, output_path, fit_method='mean'):
 
 # ================== 主入口函数 ==================
 def main():
-    csv_path = r"D:\data\20250513\BCLXL-BAK/rc_ed.csv"
+    folder_path = r'D:\data\20250514\EGFR'
+    csv_path = f"{folder_path}/rc_ed.csv"
     output_dir = r"C:/Users/pengs/Downloads"
 
     print("Starting model fitting and evaluation...")

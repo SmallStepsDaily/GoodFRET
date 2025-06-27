@@ -93,49 +93,49 @@ def count_single_cell_Ed(image_ed, image_rc, image_dd, image_da, image_aa, backg
         cell_not_zero_average_ed = cell_region_ed[cell_region_ed > 0]
         result[cell_id] = {}
         if cell_region_ed.size > 0:
-            result[cell_id]['Ed_mean_value'] = cell_region_ed.mean().item()
+            result[cell_id]['Ed_mean'] = cell_region_ed.mean().item()
             result[cell_id]['Ed_variance'] = np.var(cell_region_ed).item()
         else:
-            result[cell_id]['Ed_mean_value'] = np.nan
+            result[cell_id]['Ed_mean'] = np.nan
             result[cell_id]['Ed_variance'] = np.nan
         if cell_not_zero_average_ed.size > 0:
-            result[cell_id]['Ed_not_zero_mean_value'] = cell_not_zero_average_ed.mean().item()
+            result[cell_id]['Ed_not_zero_mean'] = cell_not_zero_average_ed.mean().item()
             result[cell_id]['Ed_not_zero_variance'] = np.var(cell_not_zero_average_ed).item()
         else:
-            result[cell_id]['Ed_not_zero_mean_value'] = np.nan
+            result[cell_id]['Ed_not_zero_mean'] = np.nan
             result[cell_id]['Ed_not_zero_variance'] = np.nan
 
         # 计算种子点的效率值
         region_ed = cell_image_ed[region_select_mask == 1]
         not_region_ed = cell_image_ed[(region_select_mask == 0) & (cell_mask == 1)]
         if region_ed.size > 0:
-            result[cell_id]['Ed_region_mean_value'] = region_ed.mean().item()
+            result[cell_id]['Ed_region_mean'] = region_ed.mean().item()
             result[cell_id]['Ed_region_variance'] = np.var(region_ed).item()
-            result[cell_id]['Ed_region_max_value'] = region_ed.max().item()
-            result[cell_id]['Ed_region_min_value'] = region_ed.min().item()
-            result[cell_id]['Ed_region_top_50_value'] = top_50_percent_average(region_ed)
-            result[cell_id]['Ed_region_top_25_value'] = top_25_percent_average(region_ed)
+            result[cell_id]['Ed_region_max'] = region_ed.max().item()
+            result[cell_id]['Ed_region_min'] = region_ed.min().item()
+            result[cell_id]['Ed_region_top_50'] = top_50_percent_average(region_ed)
+            result[cell_id]['Ed_region_top_25'] = top_25_percent_average(region_ed)
         else:
-            result[cell_id]['Ed_region_mean_value'] = np.nan
+            result[cell_id]['Ed_region_mean'] = np.nan
             result[cell_id]['Ed_region_variance'] = np.nan
-            result[cell_id]['Ed_region_max_value'] = np.nan
-            result[cell_id]['Ed_region_min_value'] = np.nan
-            result[cell_id]['Ed_region_top_50_value'] = np.nan
-            result[cell_id]['Ed_region_top_25_value'] = np.nan
+            result[cell_id]['Ed_region_max'] = np.nan
+            result[cell_id]['Ed_region_min'] = np.nan
+            result[cell_id]['Ed_region_top_50'] = np.nan
+            result[cell_id]['Ed_region_top_25'] = np.nan
         if not_region_ed.size > 0:
-            result[cell_id]['Ed_not_region_mean_value'] = not_region_ed.mean().item()
+            result[cell_id]['Ed_not_region_mean'] = not_region_ed.mean().item()
             result[cell_id]['Ed_not_region_variance'] = np.var(not_region_ed).item()
-            result[cell_id]['Ed_not_region_max_value'] = not_region_ed.max().item()
-            result[cell_id]['Ed_not_region_min_value'] = not_region_ed.min().item()
-            result[cell_id]['Ed_not_region_top_50_value'] = top_50_percent_average(not_region_ed)
-            result[cell_id]['Ed_not_region_top_25_value'] = top_25_percent_average(not_region_ed)
+            result[cell_id]['Ed_not_region_max'] = not_region_ed.max().item()
+            result[cell_id]['Ed_not_region_min'] = not_region_ed.min().item()
+            result[cell_id]['Ed_not_region_top_50'] = top_50_percent_average(not_region_ed)
+            result[cell_id]['Ed_not_region_top_25'] = top_25_percent_average(not_region_ed)
         else:
-            result[cell_id]['Ed_not_region_mean_value'] = np.nan
+            result[cell_id]['Ed_not_region_mean'] = np.nan
             result[cell_id]['Ed_not_region_variance'] = np.nan
-            result[cell_id]['Ed_not_region_max_value'] = np.nan
-            result[cell_id]['Ed_not_region_min_value'] = np.nan
-            result[cell_id]['Ed_not_region_top_50_value'] = np.nan
-            result[cell_id]['Ed_not_region_top_25_value'] = np.nan
+            result[cell_id]['Ed_not_region_max'] = np.nan
+            result[cell_id]['Ed_not_region_min'] = np.nan
+            result[cell_id]['Ed_not_region_top_50'] = np.nan
+            result[cell_id]['Ed_not_region_top_25'] = np.nan
         # print(str(result[cell_id]['Ed_region_variance']), "均值效率: ", result[cell_id]['Ed_region_mean_value'], " 前百分之50的效率值: ", result[cell_id]['Ed_not_region_top_50_value'])
     # 筛选合格的连通区域进行掩码获取
     regions_mask = filter_connected_components(regions_mask, min_size=100)

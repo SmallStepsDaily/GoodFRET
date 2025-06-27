@@ -25,8 +25,8 @@ class FRETSegmentation(Segmentation):
                  seg_diameter=200,
                  seg_min_diameter=80,
                  seg_max_diameter=500,
-                 DD_scaler=2,
-                 AA_scaler=2,
+                 DD_scaler=1,
+                 AA_scaler=1,
                  weight=0.5):
         super().__init__(output_redirector)
 
@@ -73,11 +73,11 @@ class FRETSegmentation(Segmentation):
             # 下采样到 512x512
             image_np = cv2.resize(image[i, :, :], (512, 512), interpolation=cv2.INTER_AREA)
             clahe_image_np = clahe.apply(image_np)
-            blur_image_np = cv2.GaussianBlur(image_np, (5, 5), sigmaX=1)
+            blur_image_np = cv2.GaussianBlur(clahe_image_np, (5, 5), sigmaX=1)
             merged_image[i, :, :] = cv2.addWeighted(clahe_image_np, 0.8, blur_image_np, 0.2, 0)  # 融合增强图与模糊图
 
-        merged_image = merged_image[0, :, :] * self.weight + merged_image[1, :, :] * (1 - self.weight)
-        show_gray_image(merged_image)
+        merged_image = cv2.addWeighted(merged_image[0, :, :], self.weight, merged_image[1, :, :], 1 - self.weight, 0)
+        # show_gray_image(merged_image)
         return merged_image
 
     def segmentation(self, image_np):
@@ -164,4 +164,4 @@ class FRETSegmentation(Segmentation):
 
 if __name__ == '__main__':
     nuclei = FRETSegmentation()
-    nuclei.start(r'D:\data\20250513\BCLXL-BAK\MCF7-A133-2h-d2-c40μm\8')
+    nuclei.start(r'D:\data\20250529晚\MCF7-control-2h-d3-c0μm\2')

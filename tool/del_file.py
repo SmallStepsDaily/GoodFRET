@@ -29,4 +29,4 @@ def delete_files_by_name(folder_path, target_names):
     print(f"✅ 完成，共删除 {count} 个匹配文件。")
 
 if __name__ == '__main__':
-    delete_files_by_name(r'D:\data\hql\2025.05.26 fret hoechst mito BF', 'regions_mask.tif')
+    delete_files_by_name(r'D:\data\20250513\BCLXL-BAK', 'seeds_mask.tif')

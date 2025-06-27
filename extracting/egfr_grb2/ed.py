@@ -109,7 +109,7 @@ def count_single_cell_Ed(image_ed, image_rc, image_dd, image_da, image_aa, backg
         # 筛选不符合区域大小的聚点
         seeds_mask = filter_connected_components(seeds_mask)
 
-        # 存在合格的掩码
+        # 保存合格的掩码
         agg_mask[minr:maxr, minc:maxc] = seeds_mask | agg_mask[minr:maxr, minc:maxc]
 
         # 获取前50的聚点进行分析
@@ -120,34 +120,34 @@ def count_single_cell_Ed(image_ed, image_rc, image_dd, image_da, image_aa, backg
         cell_not_zero_average_ed = cell_region_ed[cell_region_ed > 0]
         result[cell_id] = {}
         if cell_region_ed.size > 0:
-            result[cell_id]['Ed_mean_value'] = cell_region_ed.mean().item()
-            result[cell_id]['Ed_variance'] = np.var(cell_region_ed).item()
+            result[cell_id]['mean'] = cell_region_ed.mean().item()
+            result[cell_id]['variance'] = np.var(cell_region_ed).item()
         else:
-            result[cell_id]['Ed_mean_value'] = np.nan
-            result[cell_id]['Ed_variance'] = np.nan
+            result[cell_id]['mean'] = np.nan
+            result[cell_id]['variance'] = np.nan
         if cell_not_zero_average_ed.size > 0:
-            result[cell_id]['Ed_not_zero_mean_value'] = cell_not_zero_average_ed.mean().item()
-            result[cell_id]['Ed_not_zero_variance'] = np.var(cell_not_zero_average_ed).item()
+            result[cell_id]['not_zero_mean'] = cell_not_zero_average_ed.mean().item()
+            result[cell_id]['not_zero_variance'] = np.var(cell_not_zero_average_ed).item()
         else:
-            result[cell_id]['Ed_not_zero_mean_value'] = np.nan
-            result[cell_id]['Ed_not_zero_variance'] = np.nan
+            result[cell_id]['not_zero_mean'] = np.nan
+            result[cell_id]['not_zero_variance'] = np.nan
 
         # 计算种子点的效率值
         seed_region_ed = cell_image_ed[seeds_mask == 1]
         if seed_region_ed.size > 0:
-            result[cell_id]['Ed_agg_mean_value'] = seed_region_ed.mean().item()
-            result[cell_id]['Ed_agg_variance'] = np.var(seed_region_ed).item()
-            result[cell_id]['Ed_agg_max_value'] = seed_region_ed.max().item()
-            result[cell_id]['Ed_agg_min_value'] = seed_region_ed.min().item()
-            result[cell_id]['Ed_agg_top_50_value'] = top_50_percent_average(seed_region_ed)
-            result[cell_id]['Ed_agg_top_25_value'] = top_25_percent_average(seed_region_ed)
+            result[cell_id]['region_mean'] = seed_region_ed.mean().item()
+            result[cell_id]['region_variance'] = np.var(seed_region_ed).item()
+            result[cell_id]['region_max'] = seed_region_ed.max().item()
+            result[cell_id]['region_min'] = seed_region_ed.min().item()
+            result[cell_id]['region_top_50'] = top_50_percent_average(seed_region_ed)
+            result[cell_id]['region_top_25'] = top_25_percent_average(seed_region_ed)
         else:
-            result[cell_id]['Ed_agg_mean_value'] = np.nan
-            result[cell_id]['Ed_agg_variance'] = np.nan
-            result[cell_id]['Ed_agg_max_value'] = np.nan
-            result[cell_id]['Ed_agg_min_value'] = np.nan
-            result[cell_id]['Ed_agg_top_50_value'] = np.nan
-            result[cell_id]['Ed_agg_top_25_value'] = np.nan
+            result[cell_id]['region_mean'] = np.nan
+            result[cell_id]['region_variance'] = np.nan
+            result[cell_id]['region_max'] = np.nan
+            result[cell_id]['region_min'] = np.nan
+            result[cell_id]['region_top_50'] = np.nan
+            result[cell_id]['region_top_25'] = np.nan
         # 验证输出的ed是否正确
         # print(result[cell_id]['Ed_agg_top_50_value'])
     # 创建一个 DataFrame

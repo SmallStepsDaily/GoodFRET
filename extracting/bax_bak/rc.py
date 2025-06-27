@@ -89,23 +89,20 @@ def count_single_cell_rc(cell_mask, regions_mask, image_rc, image_ed, need_Rc_Ed
             region_ed_values = image_ed[region]
             MAX_RC_VALUE = np.max(cell_rc_values)
             MIN_RC_VALUE = np.min(cell_rc_values)
-            if MAX_RC_VALUE > 8:
-                MAX_RC_VALUE = 8
-            # 在0-MAX_RC_VALUE范围内以0.01为步长
-            for rc_value in np.arange(MIN_RC_VALUE, MAX_RC_VALUE + 0.1, 0.1):
-                rc_value = round(rc_value, 1)  # 避免浮点数精度问题
+            if MAX_RC_VALUE > 10:
+                MAX_RC_VALUE = 10
+            # 在0-MAX_RC_VALUE范围内以0.05为步长
+            for rc_value in np.arange(MIN_RC_VALUE, MAX_RC_VALUE + 0.05, 0.05):
+                rc_value = round(rc_value, 2)  # 避免浮点数精度问题
 
                 # 找出RC值在当前区间的像素
                 # 由于是连续值，使用范围±0.05
-                cell_pixels = np.logical_and(cell_rc_values >= rc_value - 0.05, cell_rc_values < rc_value + 0.05)
-                region_pixels = np.logical_and(region_rc_values >= rc_value - 0.05, region_rc_values < rc_value + 0.05)
+                cell_pixels = np.logical_and(cell_rc_values >= rc_value - 0.025, cell_rc_values < rc_value + 0.025)
+                region_pixels = np.logical_and(region_rc_values >= rc_value - 0.025, region_rc_values < rc_value + 0.025)
                 Cell_pixels_sum = np.sum(cell_pixels)
                 Region_pixels_sum = np.sum(region_pixels)
-                if np.sum(cell_pixels) < 5:
-                    # 如果该像素数量小于30在这个区间，记录为NaN，说明是异常值
-                    region_ed_mean = np.nan
-                    cell_ed_mean = np.nan
-                else:
+                if np.sum(cell_pixels) > 5:
+                    # 如果该像素数量小于30在这个区间，说明是异常值
                     # 计算区域内的ED均值
                     if Region_pixels_sum >= 5:
                         region_ed_mean = np.mean(region_ed_values[region_pixels])
@@ -117,16 +114,15 @@ def count_single_cell_rc(cell_mask, regions_mask, image_rc, image_ed, need_Rc_Ed
                         cell_ed_mean = np.mean(cell_ed_values[cell_pixels])
                     else:
                         cell_ed_mean = np.nan
-
-                # 保存结果
-                rc_ed_data.append({
-                    'ObjectNumber': cell_id,
-                    'Rc': rc_value,
-                    'Region_Ed': region_ed_mean,
-                    'Region_pixels_sum': Region_pixels_sum,
-                    'Cell_Ed': cell_ed_mean,
-                    'Cell_pixels_sum': Cell_pixels_sum,
-                })
+                    # 保存结果
+                    rc_ed_data.append({
+                        'ObjectNumber': cell_id,
+                        'Rc': rc_value,
+                        'Region_Ed': region_ed_mean,
+                        'Region_pixels_sum': Region_pixels_sum,
+                        'Cell_Ed': cell_ed_mean,
+                        'Cell_pixels_sum': Cell_pixels_sum,
+                    })
 
     # 创建cell_rc_df
     cell_rc_df = pd.DataFrame(cell_rc_data, index=cell_ids)

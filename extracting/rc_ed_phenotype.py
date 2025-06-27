@@ -1,4 +1,6 @@
 import os
+
+import numpy as np
 import pandas as pd
 from pathlib import Path
 from typing import List, Dict, Optional, Union
@@ -31,7 +33,7 @@ class CSVFeatureMerger:
         """
         if fret_columns is None:
             fret_columns = [
-                "Ed_region_mean_value", "Rc_region_mean", "FRET_Judge", "Near_Ed"
+                "Ed_region_mean", "Rc_region_mean", 'Fp_region_PCC', "FRET_Judge", "Near_Ed"
             ]
         if match_columns is None:
             # TODO 还可以添加 Metadata_dish
@@ -127,6 +129,22 @@ class CSVFeatureMerger:
             merged_data: 合并后的DataFrame
             output_file: 输出文件路径
         """
+        ##############################################
+        # 单细胞 FRET表征值计算
+        ##############################################
+        # 在这里计算对应的 Ed 效率表征值核 Fp 共定位表征值
+        control_df = merged_data[merged_data['Metadata_treatment'] == 'control']
+        control_mean = control_df['Ed_region_mean'].mean()
+        control_std = control_df['Ed_region_mean'].std()
+        z_score = (merged_data['Ed_region_mean'] - control_mean) / control_std
+        # 线性映射方法
+        z_abs = np.maximum(np.abs(z_score) - 0.5, 0)  # 减去阈值后再归一化
+        merged_data['E_Ed'] = np.clip(z_abs / 2.5, 0, 1)  # 映射剩余部分
+        # 限定最大差异为 z=3，超过的当成完全不相关
+        merged_data['E_Fp'] = 1 - abs(merged_data['Fp_region_PCC'])
+
+        # 计算最终的FRET表征值
+        merged_data['E'] = 0.5 * merged_data['E_Ed'] + 0.5 * merged_data['E_Fp']
         try:
             merged_data.to_csv(output_file, index=False)
             if self.verbose:
@@ -208,7 +226,7 @@ def merge_feature_files(
     # 设置默认FRET列
     if fret_columns is None:
         fret_columns = [
-            "Ed_region_mean_value", "Rc_region_mean", 'Fp_region_PCC', 'FRET_Judge', "Near_Ed"
+            "Ed_region_mean", "Rc_region_mean", 'Fp_region_PCC', 'FRET_Judge', "Near_Ed"
         ]
 
     # 创建并运行合并器
@@ -226,9 +244,10 @@ def merge_feature_files(
 
 
 if __name__ == "__main__":
+    folder_path = r'C:\Code\python\csv_data\gl\BCLXL-BAX实验数据\20250513\BCLXL-BAK'
     # 使用示例
-    PHENOTYPE_DIR = r"C:\Code\python\csv_data\gl\20250513\BCLXL-BAK\表型表征值"  # 表型特征文件目录
-    FRET_FILE = r"C:\Code\python\csv_data\gl\20250513\BCLXL-BAK\Rc-Ed_FRET_analyzed.csv"  # FRET特征文件路径
+    PHENOTYPE_DIR = f"{folder_path}\表型表征值"  # 表型特征文件目录
+    FRET_FILE = f"{folder_path}\Rc-Ed_FRET_analyzed.csv"  # FRET特征文件路径
     OUTPUT_DIR = r"C:\Users\pengs\Downloads"  # 输出目录
 
     # 运行合并操作

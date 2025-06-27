@@ -37,7 +37,7 @@ class PhenotypeAnalysisUI(QWidget):
         # 特征融合算法选择
         algo_layout = QVBoxLayout()
         algo_label = QLabel("特征融合算法选择:")
-        algo_label.setStyleSheet("font-size: 24px;")
+        algo_label.setStyleSheet("font-size: 40px;")
         self.algo_button_group = QButtonGroup()
         self.pca_radio = QRadioButton("PCA算法")
         self.tsen_radio = QRadioButton("TSNE算法")
@@ -62,7 +62,7 @@ class PhenotypeAnalysisUI(QWidget):
         # 输出文件路径选择和运行按钮
         output_layout = QVBoxLayout()
         output_label = QLabel("输出文件夹路径:")
-        output_label.setStyleSheet("font-size: 24px;")
+        output_label.setStyleSheet("font-size: 40px;")
         # 将浏览按钮和输入框放在同一行
         path_layout = QHBoxLayout()
         self.output_path_entry = QLineEdit()

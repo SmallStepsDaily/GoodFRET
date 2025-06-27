@@ -129,6 +129,22 @@ class SegmentationUI(QWidget):
         image_weight_layout.addWidget(self.image_weight_input)
         right_layout.addLayout(image_weight_layout)
 
+        FRET_DD_weight_label = QLabel("FRET-DD权重(FRET分割使用):  ")
+        self.FRET_DD_weight_input = QLineEdit()
+        self.FRET_DD_weight_input.setText("2")
+        FRET_DD_weight_layout = QHBoxLayout()
+        FRET_DD_weight_layout.addWidget(FRET_DD_weight_label)
+        FRET_DD_weight_layout.addWidget(self.FRET_DD_weight_input)
+        right_layout.addLayout(FRET_DD_weight_layout)
+
+        FRET_AA_weight_label = QLabel("FRET-AA权重(FRET分割使用):  ")
+        self.FRET_AA_weight_input = QLineEdit()
+        self.FRET_AA_weight_input.setText("2")
+        FRET_AA_weight_layout = QHBoxLayout()
+        FRET_AA_weight_layout.addWidget(FRET_AA_weight_label)
+        FRET_AA_weight_layout.addWidget(self.FRET_AA_weight_input)
+        right_layout.addLayout(FRET_AA_weight_layout)
+
         middle_layout.addLayout(right_layout, 1)
 
         main_layout.addLayout(middle_layout)
@@ -198,6 +214,8 @@ class SegmentationUI(QWidget):
                 output_redirector.append("执行 FRET 三通道的分割操作")
                 from segmentation.fret_seg import FRETSegmentation
                 weight = float(self.image_weight_input.text())
+                DD_scaler = float(self.FRET_DD_weight_input.text())
+                AA_scaler = float(self.FRET_AA_weight_input.text())
                 if 1 < weight < 0:
                     # weight权重不符合，强制设定为0.5
                     weight = 0.5
@@ -205,6 +223,8 @@ class SegmentationUI(QWidget):
                     seg_diameter=int(self.cell_diameter_input.text()),
                     seg_min_diameter=int(self.cell_min_diameter_input.text()),
                     seg_max_diameter=int(self.cell_max_diameter_input.text()),
+                    DD_scaler=DD_scaler,
+                    AA_scaler=AA_scaler,
                     weight=weight,
                     output_redirector=output_redirector
                 )

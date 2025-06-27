@@ -48,14 +48,14 @@ def analyze_fret_data(input_file, output_file=None, save_plot=True, plot_file=No
     metadata_columns = [col for col in df.columns if col.startswith('Metadata_') or col == 'ObjectNumber']
 
     # 检查所需的特征列是否存在
-    required_features = ['Ed_region_mean_value', 'Rc_region_mean', 'Fp_region_PCC']
+    required_features = ['Ed_region_mean', 'Rc_region_mean', 'Fp_region_PCC']
     for feature in required_features:
         if feature not in df.columns:
             print(f"错误: 数据中缺少必要的列 '{feature}'")
             return
 
     # 提取数据
-    ed_values = df['Ed_region_mean_value']
+    ed_values = df['Ed_region_mean']
     rc_values = df['Rc_region_mean']
 
     # 计算每个点到两个函数的距离
@@ -110,7 +110,7 @@ def plot_fret_analysis(rc_values, ed_values, control_pred, drug_pred, judge_resu
 
     参数:
     rc_values: Rc_region_mean 值
-    ed_values: Ed_region_mean_value 值
+    ed_values: Ed_region_mean 值
     control_pred: control_ed 函数的预测值
     drug_pred: drug_ed 函数的预测值
     judge_results: FRET_Judge 判断结果
@@ -152,6 +152,7 @@ def plot_fret_analysis(rc_values, ed_values, control_pred, drug_pred, judge_resu
 
 
 if __name__ == "__main__":
+    folder_path = r'C:\Code\python\csv_data\gl\BCLXL-BAX实验数据\20250515\BCLXL-BAK'
     # 示例用法
-    input_csv = r"C:\Code\python\csv_data\gl\20250513\BCLXL-BAK\FRET-RC0.5-2.5.csv"  # 替换为你的 CSV 文件路径
+    input_csv = f"{folder_path}\FRET.csv"  # 替换为你的 CSV 文件路径
     analyze_fret_data(input_csv, save_plot=True)
