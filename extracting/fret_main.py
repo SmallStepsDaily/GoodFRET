@@ -39,4 +39,4 @@ def main(folder_path):
         print("\n未处理任何文件或处理过程中出错")
 
 if __name__ == '__main__':
-    main(r'C:\Code\python\csv_data\gl\BCLXL-BAX实验数据\20250523')
+    main(r'C:\Code\python\csv_data\gl\EGFR-GRB2实验数据\A549\20250514')

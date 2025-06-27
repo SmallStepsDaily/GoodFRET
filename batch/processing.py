@@ -153,6 +153,6 @@ if __name__ == "__main__":
         return fret_model.start(image_set_path)
 
 
-    fret = FRETComputer('bax_bak')
-    batch = BatchProcessing(r'C:\Users\pengs\Downloads\test')
+    fret = FRETComputer('egrf_grb2')
+    batch = BatchProcessing(r'D:\data\20250514\EGFR\A549-AFA-2h-d1-c25μm\10')
     batch.start(process, fret)

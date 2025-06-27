@@ -248,7 +248,7 @@ def region_growth_segmentation(image_dd, threshold=15, threshold_abs=125):
     return filtered_grown_regions
 
 
-def region_growth(image, seeds, threshold=20, max_points=400):
+def region_growth(image, seeds, threshold=20, max_points=200):
     """
     执行区域生长算法，并按每个种子点独立限制最大生长点数。
 

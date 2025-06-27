@@ -170,6 +170,8 @@ def calculate_MOC(channel1: np.array, channel2: np.array):
     """
     计算 AA 通道和 DD 通道中的MOC系数
     """
+    if len(channel1) == 0:
+        return np.nan
     return np.sum(channel1 * channel2) / np.sqrt((channel1 ** 2).sum() * (channel2 ** 2).sum())
 
 def calculate_manders(channel1: np.array, channel2: np.array):
