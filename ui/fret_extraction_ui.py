@@ -62,6 +62,13 @@ class FRETExtractionUI(QWidget):
         middle_layout.addWidget(da_label, 3, 0)
         middle_layout.addWidget(self.da_input, 3, 1)
 
+        # 有效Ed像素占比
+        ed_valid_label = QLabel("有效Ed像素占比:")
+        self.ed_valid_input = QLineEdit()
+        self.ed_valid_input.setText("0.5")
+        middle_layout.addWidget(ed_valid_label, 4, 0)
+        middle_layout.addWidget(self.ed_valid_input, 4, 1)
+
         # RC/ED 筛选参数部分
         rc_ed_param_label = QLabel("RC/ED 筛选参数")
         rc_ed_param_label.setStyleSheet("font-size: 30px;")
@@ -231,6 +238,12 @@ class FRETExtractionUI(QWidget):
                 need_Fp = True
             if self.Rc_Ed_feature.isChecked():
                 need_Rc_Ed = True
+
+            ed_threshold_ratio = float(self.ed_valid_input.text())
+
+            if ed_threshold_ratio > 1 or ed_threshold_ratio < 0:
+                ed_threshold_ratio = 0.5
+
             from extracting.compute import FRETComputer
             from batch.processing import BatchProcessing
             # 参数Ed提取参数 验证批处理流程
@@ -253,7 +266,8 @@ class FRETExtractionUI(QWidget):
                                 need_Rc=need_Rc,
                                 need_Fp=need_Fp,
                                 need_Rc_Ed=need_Rc_Ed,
-                                output_redirector=output_redirector)
+                                ed_threshold_ratio=ed_threshold_ratio,
+                                output_redirector=output_redirector,)
             batch = BatchProcessing(input_folder, stop_event=self.stop_event)
             batch.start(process, fret)
             self.output_text.append("运行完成==============================================>FRET特征提取程序")

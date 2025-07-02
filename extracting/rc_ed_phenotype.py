@@ -14,10 +14,13 @@ class CSVFeatureMerger:
             phenotype_dir: str,
             fret_file: str,
             output_dir: str,
+            ed_fp_feature_name: str,
             match_columns=None,
             fret_columns=None,
             file_pattern: str = "*.csv",
-            verbose: bool = True
+            verbose: bool=True,
+            weight: float=0.5,
+            need_rc_ed: bool=False
     ):
         """
         初始化CSV特征合并器
@@ -33,12 +36,11 @@ class CSVFeatureMerger:
         """
         if fret_columns is None:
             fret_columns = [
-                "Ed_region_mean", "Rc_region_mean", 'Fp_region_PCC', "FRET_Judge", "Near_Ed"
+                "Ed_region_mean", "Rc_region_mean", 'Fp_region_PCC', "Fp_cell_PCC", "FRET_Judge", "Near_Ed", "Ed_diff"
             ]
         if match_columns is None:
-            # TODO 还可以添加 Metadata_dish
             match_columns = [
-                "Metadata_hour", "Metadata_treatment", "Metadata_site",
+                "Metadata_hour", "Metadata_treatment", "Metadata_site", "Metadata_dish",
                 "Metadata_concentration", "ObjectNumber"
             ]
         self.phenotype_dir = phenotype_dir
@@ -48,6 +50,14 @@ class CSVFeatureMerger:
         self.fret_columns = fret_columns
         self.file_pattern = file_pattern
         self.verbose = verbose
+
+        # 计算FRET表征值的权重
+        self.weight = weight
+        # 查看是否需要拟合rc-ed曲线计算得出的效率差作为表征值之一
+        self.need_rc_ed = need_rc_ed
+
+        # 使用该特征作为共定位表征值
+        self.ed_fp_feature_name = ed_fp_feature_name
 
         # 确保输出目录存在
         Path(output_dir).mkdir(parents=True, exist_ok=True)
@@ -132,6 +142,10 @@ class CSVFeatureMerger:
         ##############################################
         # 单细胞 FRET表征值计算
         ##############################################
+
+        # 计算差值作为Ed特征值之一
+        merged_data['E_Ed_diff'] = merged_data['Ed_diff']
+
         # 在这里计算对应的 Ed 效率表征值核 Fp 共定位表征值
         control_df = merged_data[merged_data['Metadata_treatment'] == 'control']
         control_mean = control_df['Ed_region_mean'].mean()
@@ -139,12 +153,31 @@ class CSVFeatureMerger:
         z_score = (merged_data['Ed_region_mean'] - control_mean) / control_std
         # 线性映射方法
         z_abs = np.maximum(np.abs(z_score) - 0.5, 0)  # 减去阈值后再归一化
-        merged_data['E_Ed'] = np.clip(z_abs / 2.5, 0, 1)  # 映射剩余部分
-        # 限定最大差异为 z=3，超过的当成完全不相关
-        merged_data['E_Fp'] = 1 - abs(merged_data['Fp_region_PCC'])
+        merged_data['E_Ed_std'] = np.clip(z_abs / 2.5, 0, 1)  # 映射剩余部分
 
-        # 计算最终的FRET表征值
-        merged_data['E'] = 0.5 * merged_data['E_Ed'] + 0.5 * merged_data['E_Fp']
+
+        # 使用预测值进行效率计算
+        control_df = merged_data[merged_data['Metadata_treatment'] == 'control']
+        control_mean = control_df['Near_Ed'].mean()
+        control_std = control_df['Near_Ed'].std()
+        z_score = (merged_data['Near_Ed'] - control_mean) / control_std
+        # 线性映射方法
+        z_abs = np.maximum(np.abs(z_score) - 0.5, 0)  # 减去阈值后再归一化
+        merged_data['E_Ed_predict_std'] = np.clip(z_abs / 2.5, 0, 1)  # 映射剩余部分
+
+
+        # 限定最大差异为 z=3，超过的当成完全不相关
+        merged_data['E_Fp'] = 1 - abs(merged_data[self.ed_fp_feature_name])
+
+
+        # 查看是否需要拟合Rc-Ed曲线的值作为表征值手段
+        if self.need_rc_ed:
+            # 计算最终的FRET表征值
+            merged_data['E'] = self.weight * merged_data['E_Ed_predict_std'] + (1 - self.weight) * merged_data['E_Fp']
+        else:
+            merged_data['E'] = self.weight * merged_data['E_Ed_std'] + (1 - self.weight) * merged_data['E_Fp']
+
+
         try:
             merged_data.to_csv(output_file, index=False)
             if self.verbose:
@@ -196,10 +229,13 @@ def merge_feature_files(
         phenotype_dir: str,
         fret_file: str,
         output_dir: str,
+        ed_fp_feature_name: str,
         match_columns: Optional[List[str]] = None,
         fret_columns: Optional[List[str]] = None,
         file_pattern: str = "*.csv",
-        verbose: bool = True
+        verbose: bool = True,
+        weight: float = 0.5,
+        need_rc_ed: bool = True,
 ) -> Dict[str, str]:
     """
     合并特征文件的主函数
@@ -219,14 +255,14 @@ def merge_feature_files(
     # 设置默认匹配列
     if match_columns is None:
         match_columns = [
-            "Metadata_hour", "Metadata_treatment", "Metadata_site",
+            "Metadata_hour", "Metadata_treatment", "Metadata_site", "Metadata_dish",
             "Metadata_concentration", "ObjectNumber"
         ]
 
     # 设置默认FRET列
     if fret_columns is None:
         fret_columns = [
-            "Ed_region_mean", "Rc_region_mean", 'Fp_region_PCC', 'FRET_Judge', "Near_Ed"
+            "Ed_region_mean", "Rc_region_mean", 'Fp_region_PCC', 'Fp_cell_PCC', 'FRET_Judge', "Near_Ed", "Ed_diff"
         ]
 
     # 创建并运行合并器
@@ -237,7 +273,10 @@ def merge_feature_files(
         match_columns=match_columns,
         fret_columns=fret_columns,
         file_pattern=file_pattern,
-        verbose=verbose
+        verbose=verbose,
+        weight=weight,
+        need_rc_ed=need_rc_ed,
+        ed_fp_feature_name=ed_fp_feature_name
     )
 
     return merger.process_all_files()
@@ -254,7 +293,8 @@ if __name__ == "__main__":
     results = merge_feature_files(
         phenotype_dir=PHENOTYPE_DIR,
         fret_file=FRET_FILE,
-        output_dir=OUTPUT_DIR
+        output_dir=OUTPUT_DIR,
+        ed_fp_feature_name='Fp_region_cell'
     )
 
     # 打印结果摘要

@@ -94,6 +94,9 @@ def count_single_cell_Ed(image_ed, image_rc, image_dd, image_da, image_aa, backg
         # 判断对应的聚点是否da通道满足大于三倍背景值的条件
         seeds_mask = filter_mask_by_intensity(seeds_mask, cell_image_da, background_noise_values['DA'])
 
+        # 保存合格的掩码
+        agg_mask[minr:maxr, minc:maxc] = seeds_mask | agg_mask[minr:maxr, minc:maxc]
+
         # 筛选在符合Rc范围内的值
         # 创建RC图像的掩码（值在0到3之间的区域为True）
         rc_mask = (cell_image_rc >= rc_min) & (cell_image_rc <= rc_max)
@@ -108,9 +111,6 @@ def count_single_cell_Ed(image_ed, image_rc, image_dd, image_da, image_aa, backg
 
         # 筛选不符合区域大小的聚点
         seeds_mask = filter_connected_components(seeds_mask)
-
-        # 保存合格的掩码
-        agg_mask[minr:maxr, minc:maxc] = seeds_mask | agg_mask[minr:maxr, minc:maxc]
 
         # 获取前50的聚点进行分析
         seeds_mask = get_top_intensity_regions(seeds_mask, cell_image_normalize_dd, 50)
@@ -210,7 +210,7 @@ def filter_mask_by_intensity(seeds_mask, image_aa, aa_value, background_factor=2
     # 创建新掩码，初始化为全0
     filtered_mask = np.zeros_like(seeds_mask, dtype=np.uint8)
 
-    # 在原始掩码区域内筛选强度大于3*aa_value的像素
+    # 在原始掩码区域内筛选强度大于 background_factor * aa_value 的像素
     mask_region = seeds_mask > 0
     valid_pixels = (image_aa > background_factor * aa_value) & mask_region
 

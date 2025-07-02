@@ -154,7 +154,11 @@ class LDAClassifyModel(Model):
         drug_predict_list = df.loc[(df['Metadata_treatment'] == drug_name) & (df['Is_Test'] == True), 'Predicted_Probability']
         # 在这里如果加药组数量比较少的情况下，需要添加训练组数据进去
         if len(drug_predict_list) <= 10:
-            drug_predict_list = pd.concat([drug_predict_list, df.loc[(df['Metadata_treatment'] == drug_name), 'Predicted_Probability'].sample(n=20)], axis=0)
+            drug_df = df.loc[(df['Metadata_treatment'] == drug_name), 'Predicted_Probability']
+            if len(drug_df) >= 20:
+                drug_predict_list = pd.concat([drug_predict_list, drug_df.sample(n=20)], axis=0)
+            else:
+                drug_predict_list = drug_df
         drug_predict_value = (drug_predict_list - control_predict_mean).mean()
         # 计算表型表征值
         df['S'] = df['Predicted_Probability'] - control_predict_mean

@@ -56,16 +56,10 @@ def start(fret):
     cell_ed_df = cell_ed_df.add_prefix('Ed_')
     print("效率特征")
 
-    # 设置保存文件
-    # 保存分析数据情况
-    merged_df = cell_ed_df
-    merged_df['ObjectNumber'] = merged_df.index
-    columns = ['ObjectNumber'] + [col for col in merged_df.columns if col != 'ObjectNumber']
-    # 按新顺序重新排列列
-    merged_df = merged_df.reindex(columns=columns)
     # 设置共定位特征文件和rc特征文件
     cell_localization_df = pd.DataFrame()
     cell_rc_df = pd. DataFrame()
+    rc_ed_df = None
 
     # 该通过亚细胞器区域进行划分的操作存在争议，后续验证 TODO
     # nuclei_seeds_mask = None
@@ -135,9 +129,16 @@ def start(fret):
         # 提取溶度比信息，获取浓度比对应的rc-ed图像
         print("共定位特征")
 
+
     # 直接按列合并
     merged_df = pd.concat([cell_ed_df, cell_localization_df, cell_rc_df], axis=1)
-    return merged_df
+    # 设置保存文件
+    merged_df['ObjectNumber'] = merged_df.index
+    columns = ['ObjectNumber'] + [col for col in merged_df.columns if col != 'ObjectNumber']
+    # 按新顺序重新排列列
+    merged_df = merged_df.reindex(columns=columns)
+
+    return merged_df, rc_ed_df
 
 
 def process_masks(mit_mask, nuclei_mask):

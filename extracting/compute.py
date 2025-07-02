@@ -60,6 +60,7 @@ class FRETComputer:
                  need_Rc=True,
                  need_Fp=True,
                  need_Rc_Ed=True,
+                 ed_threshold_ratio=0.5,
                  ):
         """
         :param a: 校正因子a
@@ -105,6 +106,9 @@ class FRETComputer:
         self.need_Rc = need_Rc
         self.need_Fp = need_Fp
         self.need_Rc_Ed = need_Rc_Ed
+
+        # ed有效像素占比阈值
+        self.ed_threshold_ratio = ed_threshold_ratio
 
         # 命令行输出到文本框内
         self.output = output_redirector
@@ -176,8 +180,7 @@ class FRETComputer:
         self.output.append(f"FRET计算完成 ============================================> {sub_path}")
         return result
 
-    @staticmethod
-    def filter_cell_region(image_ED, mask):
+    def filter_cell_region(self, image_ED, mask):
         unique_labels = torch.unique(mask)
         # 排除背景标签 0
         unique_labels = unique_labels[unique_labels != 0]
@@ -191,7 +194,7 @@ class FRETComputer:
             non_zero_count = torch.sum(region_pixels > 0)
             total_pixels = region_pixels.numel()
             # 需要满足有效效率区域大于百分之50的情况，否则容易存在噪声
-            if non_zero_count <= total_pixels * 0.5:
+            if non_zero_count <= total_pixels * self.ed_threshold_ratio:
                 filtered_mask[label_mask] = 0
             else:
                 filtered_mask[label_mask] = new_label
@@ -266,8 +269,8 @@ class FRETComputer:
 
 if __name__ == "__main__":
     # EGFR 靶点验证
-    fret = FRETComputer('egfr_grb2', expose_times=(300, 300, 300))
-    fret.start(r'D:\data\20250514\EGFR\A549-AFA-2h-d1-c25μm\12')
+    fret = FRETComputer('egfr_grb2', expose_times=(300, 300, 300), ed_threshold_ratio=0.1)
+    fret.start(r'D:\data\20250611\EGFR\A549-control-4h-d3-c0μm\1')
     # BAX 靶点验证
     # fret = FRETComputer('bax_bak', expose_times=(300, 300, 300))
     # D:\data\20250412\BCLXL-BAK\MCF7-A133-2h-d1-c60μm\6

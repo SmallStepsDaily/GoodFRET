@@ -9,150 +9,124 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 
+# 支持多组模型的表达式输入形式（如 {'control': '0.8*x + 0.1', 'AFA': '0.6*x + 0.2'}）
+def parse_model(expr):
+    def func(x):
+        return eval(expr, {"x": x, "np": np})
+    return func
 
-# 定义控制组和药物组的响应函数
-def control_ed(rc, edmax=0.3680, kd=1.0):
-    return edmax * rc / (kd + rc)
+def analyze_fret_data(input_file, model_dict, treatment_col='Metadata_treatment',
+                      output_path=None, save_plot=True, plot_file=None):
+    df = pd.read_csv(input_file)
+    print(f"读取文件成功: {input_file}，共 {len(df)} 条记录")
 
+    if 'Ed_region_mean' not in df.columns or 'Rc_region_mean' not in df.columns:
+        raise ValueError("缺少 Ed_region_mean 或 Rc_region_mean 列")
 
-def drug_ed(rc, edmax=0.1819, kd=0.6653):
-    return edmax * rc / (kd + rc)
+    ed = df['Ed_region_mean'].values
+    rc = df['Rc_region_mean'].values
+    treatments = df[treatment_col].astype(str).values
 
+    parsed_models = {k: parse_model(v) for k, v in model_dict.items()}
 
-def analyze_fret_data(input_file, output_file=None, save_plot=True, plot_file=None):
-    """
-    分析 FRET 数据，判断每个数据点更接近 control_ed 还是 drug_ed 函数
+    judge_result = []
+    nearest_pred = []
+    ed_diff = []
 
-    参数:
-    input_file (str): 输入 CSV 文件路径
-    output_file (str, optional): 输出 CSV 文件路径，默认为 None（在输入文件名后添加 _analyzed）
-    save_plot (bool, optional): 是否保存拟合结果图，默认为 True
-    plot_file (str, optional): 图像保存路径，默认为 None（在输入文件名后添加 _plot.png）
-    """
-    # 记录输入文件名用于自动生成图像名
-    analyze_fret_data.input_file = input_file
+    for i in range(len(df)):
+        trt = treatments[i]
+        rc_val = rc[i]
+        ed_val = ed[i]
+        if np.isnan(ed_val):
+            judge_result.append(np.nan)
+            nearest_pred.append(np.nan)
+            ed_diff.append(np.nan)
+            continue
 
-    # 读取 CSV 文件
-    try:
-        df = pd.read_csv(input_file)
-        print(f"成功读取文件: {input_file}")
-        print(f"数据包含 {len(df)} 行和 {len(df.columns)} 列")
-    except FileNotFoundError:
-        print(f"错误: 文件 {input_file} 不存在")
-        return
-    except Exception as e:
-        print(f"错误: 读取文件时发生错误 - {e}")
-        return
+        if trt not in parsed_models or 'control' not in parsed_models:
+            judge_result.append("")
+            nearest_pred.append(np.nan)
+            ed_diff.append(np.nan)
+            continue
 
-    # 提取元数据列 (Metadata_ 开头) 和 ObjectNumber
-    metadata_columns = [col for col in df.columns if col.startswith('Metadata_') or col == 'ObjectNumber']
+        control_model = parsed_models['control']
+        drug_model = parsed_models[trt]
 
-    # 检查所需的特征列是否存在
-    required_features = ['Ed_region_mean', 'Rc_region_mean', 'Fp_region_PCC']
-    for feature in required_features:
-        if feature not in df.columns:
-            print(f"错误: 数据中缺少必要的列 '{feature}'")
-            return
+        control_pred = control_model(rc_val)
+        drug_pred = drug_model(rc_val)
 
-    # 提取数据
-    ed_values = df['Ed_region_mean']
-    rc_values = df['Rc_region_mean']
+        control_error = abs(ed_val - control_pred)
+        drug_error = abs(ed_val - drug_pred)
 
-    # 计算每个点到两个函数的距离
-    control_pred = control_ed(rc_values)
-    drug_pred = drug_ed(rc_values)
+        is_drug = drug_error < control_error
+        if np.isnan(drug_pred):
+            judge_result.append("")
+        else:
+            judge_result.append(trt if is_drug else 'control')
+        nearest_pred.append(drug_pred if is_drug else control_pred)
+        ed_diff.append(control_pred - (drug_pred if is_drug else control_pred))
 
-    # 计算绝对误差
-    control_error = np.abs(ed_values - control_pred)
-    drug_error = np.abs(ed_values - drug_pred)
+    df['FRET_Judge'] = judge_result
+    df['Near_Ed'] = nearest_pred
+    df['Ed_diff'] = ed_diff
 
-    # 判断更接近哪个函数
-    df['FRET_Judge'] = drug_error < control_error  # True 表示更接近 drug_ed
+    output_file = os.path.join(str(output_path), "Rc-Ed_FRET_analyzed.csv")
+    df.to_csv(output_file, index=False)
+    print(f"分析结果已保存至: {output_path}")
 
-    # 计算更接近的函数的预测值
-    df['Near_Ed'] = np.where(df['FRET_Judge'], drug_pred, control_pred)
-
-    # 准备输出数据，包含元数据、原始特征和新计算的特征
-    output_columns = metadata_columns + required_features + ['FRET_Judge', 'Near_Ed']
-    output_df = df[output_columns]
-
-    # 确定输出文件名
-    if output_file is None:
-        output_path = os.path.dirname(input_file)
-        output_file = f"{output_path}/Rc-Ed_FRET_analyzed.csv"
-
-    # 保存结果
-    try:
-        output_df.to_csv(output_file, index=False)
-        print(f"分析结果已保存至: {output_file}")
-
-        # 统计结果
-        total = len(df)
-        drug_count = df['FRET_Judge'].sum()
-        control_count = total - drug_count
-
-        print(f"\n统计结果:")
-        print(f"总数据点: {total}")
-        print(f"更接近 drug_ed 函数的点: {drug_count} ({drug_count / total * 100:.2f}%)")
-        print(f"更接近 control_ed 函数的点: {control_count} ({control_count / total * 100:.2f}%)")
-
-    except Exception as e:
-        print(f"错误: 保存结果时发生错误 - {e}")
-
-    # 可视化结果
     if save_plot:
-        plot_fret_analysis(rc_values, ed_values, control_pred, drug_pred, df['FRET_Judge'], plot_file)
+        plot_fret_analysis(df, parsed_models, output_path)
 
-
-def plot_fret_analysis(rc_values, ed_values, control_pred, drug_pred, judge_results, plot_file=None):
-    """
-    可视化 FRET 分析结果（只显示非control的数据点）
-
-    参数:
-    rc_values: Rc_region_mean 值
-    ed_values: Ed_region_mean 值
-    control_pred: control_ed 函数的预测值
-    drug_pred: drug_ed 函数的预测值
-    judge_results: FRET_Judge 判断结果
-    plot_file: 图像保存路径
-    """
+def plot_fret_analysis(df, model_funcs, output_path):
     plt.figure(figsize=(10, 6))
+    df = df.dropna()
+    rc_values = df['Rc_region_mean'].values
+    ed_values = df['Ed_region_mean'].values
+    judge_results = df['FRET_Judge'].values
 
-    # 只绘制非control的数据点（judge_results为True）
-    plt.scatter(rc_values[judge_results], ed_values[judge_results],
-                c='red', marker='o', s=30, alpha=0.6, label='Near drug_ed')
+    for label in sorted(set(judge_results)):
+        mask = judge_results == label
+        if label == "":
+            continue
+        elif label == 'control':
+            plt.scatter(rc_values[mask], ed_values[mask], c='blue', s=30, alpha=0.6, label='Near control')
+        else:
+            plt.scatter(rc_values[mask], ed_values[mask], label=f'Near {label}', s=30, alpha=0.6)
 
-    # 绘制两个函数曲线
-    rc_range = np.linspace(min(rc_values), max(rc_values), 500)
-    plt.plot(rc_range, control_ed(rc_range), 'b-', linewidth=2, label='control_ed')
-    plt.plot(rc_range, drug_ed(rc_range), 'r-', linewidth=2, label='drug_ed')
+    rc_range = np.linspace(0, max(rc_values), 500)
 
-    # 添加图例和标签
-    plt.legend(loc='best')
+    if 'control' in model_funcs:
+        plt.plot(rc_range, model_funcs['control'](rc_range), 'b-', label='control_ed', linewidth=2)
+    for label in set(judge_results):
+        if label != 'control' and label != 'unknown' and label in model_funcs:
+            plt.plot(rc_range, model_funcs[label](rc_range), '--', linewidth=2, label=f'{label}_ed')
+
     plt.xlabel('Rc')
     plt.ylabel('Ed')
     plt.title('FRET Data Analysis (Non-control Points)')
     plt.grid(True, linestyle='--', alpha=0.7)
-
+    plt.legend(loc='best')
     plt.tight_layout()
 
-    # 保存图像
-    if plot_file:
-        plt.savefig(plot_file, dpi=300, bbox_inches='tight')
-        print(f"图像已保存至: {plot_file}")
-    else:
-        # 自动生成图像文件名
-        if hasattr(analyze_fret_data, 'input_file'):
-            output_path = os.path.dirname(analyze_fret_data.input_file)
-            output_file = f"{output_path}/Rc-Ed_drug_classification.png"
-            plt.savefig(output_file, dpi=300, bbox_inches='tight')
-            print(f"图像已保存至: {output_file}")
 
-    plt.close()  # 关闭图像窗口，避免重复显示
-
+    output_file = os.path.join(output_path, 'Rc-Ed_drug_classification.png')
+    plt.savefig(output_file, dpi=300, bbox_inches='tight')
+    print(f"图像已保存至: {output_file}")
+    plt.close()
 
 if __name__ == "__main__":
-    folder_path = r'C:\Code\python\csv_data\gl\BCLXL-BAX实验数据\20250515\BCLXL-BAK'
-    # 示例用法
-    input_csv = f"{folder_path}\FRET.csv"  # 替换为你的 CSV 文件路径
-    analyze_fret_data(input_csv, save_plot=True)
+    folder_path = r'C:\Code\python\csv_data\gl\EGFR-GRB2实验数据\A549\20250514'
+    input_csv = f"{folder_path}\FRET.csv"
+
+    # EGFR 拟合靶点
+    EGFR_model_exprs = {
+        'control': '0.4449475861028414 * x / (1.0 + x)',
+        'DAC': '0.1122966659895491 * x',
+        'ALM': '0.09516652556445405 * x ',
+        'GEF': '0.09310420785005083 * x',
+        'AFA': '0.08681578444875934 * x',
+        'OSI': '0.05591866357178568 * x',
+        'VIN': '0.4109161217383655 * x / (1.0 + x)',
+    }
+
+    analyze_fret_data(input_csv, EGFR_model_exprs, output_path=folder_path, save_plot=True)
