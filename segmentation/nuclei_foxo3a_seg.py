@@ -9,6 +9,7 @@ from extracting.phenotype.foxo3a_nuclei import calculate_fluorescence_ratio
 from segmentation.seg import Segmentation, filter_labeled_masks_by_diameter
 from cellpose import models
 
+from tool.image import show_gray_image
 from ui import Output
 
 # 忽略特定的 UserWarning
@@ -29,15 +30,13 @@ class FOXO3ANucleiSegmentation(Segmentation):
                  seg_nuclei_max_diameter=200,
                  output_redirector=Output()):
         super().__init__(output_redirector)
-        self.channel = [0, 0]
         self.seg_diameter = seg_diameter
         self.seg_min_diameter = seg_min_diameter
         self.seg_max_diameter = seg_max_diameter
-        self.seg_model = models.Cellpose(gpu=True, model_type='cyto3')
+        self.seg_model = models.CellposeModel(gpu=True)
         self.seg_nuclei_diameter = seg_nuclei_diameter
         self.seg_nuclei_min_diameter = seg_nuclei_min_diameter
         self.seg_nuclei_max_diameter = seg_nuclei_max_diameter
-        self.seg_nuclei_model = models.Cellpose(gpu=True, model_type='nuclei')
 
     def start(self, path):
         # 读取细胞核和线粒体图像
@@ -59,34 +58,33 @@ class FOXO3ANucleiSegmentation(Segmentation):
         # 开始计算对应的 foxo3a 的入核比例情况
         print("计算单细胞区域 foxo3a 入核情况 ===================> " + str(path))
         result = calculate_fluorescence_ratio(foxo3a_original_image_np, foxo3a_mask_np, nuclei_mask_np)
+        result.to_csv(os.path.join(path, 'Foxo3a.csv'))
         print("保存单细胞区域 foxo3a 入核情况 ===================> " + str(path))
         return result
 
-    def pretreatment(self, image):
-        result_image = self.log_image(image)
+    def pretreatment(self, image_np):
+        if image_np.mean() * 20 < image_np.max():
+            print("该图像的存在较高的亮度，需要进行log对换降低最高亮度值！！！")
+            result_image = self.log_image(image_np)
+        else:
+            result_image = image_np
         result_image = self.gaussian_image(result_image)
         return result_image
 
 
     def seg_foxo3a(self, image_np, factor):
-        masks, flows, styles, diams = self.seg_model.eval(image_np,
+        masks, flows, styles = self.seg_model.eval(image_np,
                                                           diameter=self.seg_diameter / factor,
-                                                          channels=self.channel,
-                                                          flow_threshold=0.4,
-                                                          resample=True,
-                                                          do_3D=False)
+                                                          flow_threshold=0.4)
         masks_filtered = filter_labeled_masks_by_diameter(masks,
                                                           min_diameter=self.seg_min_diameter / factor,
                                                           max_diameter=self.seg_max_diameter / factor)
         return masks_filtered
 
     def seg_nuclei(self, image_np, factor):
-        masks, flows, styles, diams = self.seg_nuclei_model.eval(image_np,
-                                                                    diameter=self.seg_nuclei_diameter / factor,
-                                                                    channels=[0, 0],
-                                                                    flow_threshold=0.4,
-                                                                    resample=True,
-                                                                    do_3D=False)
+        masks, flows, styles = self.seg_model.eval(image_np,
+                                                   diameter=self.seg_nuclei_diameter / factor,
+                                                   flow_threshold=0.4)
         masks_filtered = filter_labeled_masks_by_diameter(masks,
                                                           min_diameter=self.seg_nuclei_min_diameter / factor,
                                                           max_diameter=self.seg_nuclei_max_diameter / factor)
@@ -139,4 +137,4 @@ if __name__ == '__main__':
         print("CUDA is NOT available. GPU is OFF.")
 
     cell = FOXO3ANucleiSegmentation()
-    cell.start(r'D:\data\qrm\2025.03.19 PC9 FOXO3A 4H\PC9-afa-4h-d1-c11.16μm\4')
+    cell.start(r'D:\data\qrm\2025.06.30 H1299 FOXO 0.5\H1299-vin-0.5h-d7-c110.40μm\7')

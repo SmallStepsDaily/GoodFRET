@@ -239,7 +239,7 @@ def process_csv_with_best_model(file_path, output_path, fit_method='mean'):
 
 # ================== 主入口函数 ==================
 def main():
-    folder_path = r'C:\Code\python\csv_data\gl\EGFR-GRB2实验数据\A549\20250611'
+    folder_path = r'C:\Code\python\csv_data\gl\EGFR-GRB2实验数据\H1975\20250716'
     csv_path = f"{folder_path}/rc_ed.csv"
     output_dir = r"C:/Users/pengs/Downloads"
 

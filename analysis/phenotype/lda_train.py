@@ -1,11 +1,7 @@
 # lda_train.py
 import os
-import sys
 import pandas as pd
-import numpy as np
 import joblib
-from io import BytesIO
-from PIL import Image
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, LabelBinarizer
 from sklearn.calibration import CalibratedClassifierCV
@@ -95,14 +91,16 @@ def compute_and_save_model(csv_path, ptype):
 
     plt.tight_layout()
 
+    # 保存模型
+    cell = df['Metadata_cell'].iloc[0]
+
     base_name = os.path.splitext(os.path.basename(csv_path))[0]
-    fig_path = os.path.join("model", f"{base_name}_LDA_Train_Result.png")
+    fig_path = os.path.join("model", f"{cell}_{base_name}_LDA_Train_Result.png")
     plt.savefig(fig_path, dpi=300)
     plt.close()
     print(f"保存图像至: {fig_path}")
 
-    # 保存模型
-    cell = df['Metadata_cell'].iloc[0]
+
     model_name = f"{ptype}-{cell}-{drug_name}.pkl"
     os.makedirs("model", exist_ok=True)
     model_path = os.path.join("model", model_name)
@@ -110,4 +108,4 @@ def compute_and_save_model(csv_path, ptype):
     print(f"保存模型至: {model_path}")
 
 if __name__ == '__main__':
-    compute_and_save_model(r"C:\Code\python\csv_data\gl\EGFR-GRB2实验数据\A549\模型数据\FB_BF_DAC.csv", 'BF')
+    compute_and_save_model(r"C:\Code\python\csv_data\gl\EGFR-GRB2实验数据\H1975\模型训练\FB_BF_OSI.csv", 'BF')

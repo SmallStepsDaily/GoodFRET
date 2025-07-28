@@ -1,6 +1,8 @@
 import cv2
 import numpy as np
 import pandas as pd
+from scipy.signal import find_peaks
+from scipy.stats import gaussian_kde
 from skimage.measure import regionprops
 
 from tool.image import show_gray_image
@@ -210,9 +212,10 @@ def filter_mask_by_intensity(seeds_mask, image_aa, aa_value, background_factor=2
     return filtered_mask
 
 
-def region_segmentation(image_dd):
+def region_segmentation(image_dd, method='Kmean'):
     """
     分割单细胞图像中的丝状/片状亮区域
+    阈值分割算法：默认是 Kmean 算法
 
     参数:
         image_dd: 单细胞框选图，背景为0，细胞区域>0
@@ -236,18 +239,57 @@ def region_segmentation(image_dd):
     if cell_pixels.size == 0:  # 防止所有细胞像素都被滤波为0
         return np.zeros_like(image_dd, dtype=np.uint8)
 
-    # 计算细胞区域的Otsu阈值
-    otsu_threshold, _ = cv2.threshold(
-        cell_pixels, 1, 255,
-        cv2.THRESH_BINARY + cv2.THRESH_OTSU
-    )
+    threshold_value = 1
+    if method == 'Kmean':
+        # 重塑图像为一维数组
+        pixels = cell_pixels.reshape((-1, 1)).astype(np.float32)
+        threshold_value = adaptive_threshold(pixels)
+
+
+    else:
+        # 计算细胞区域的Otsu阈值
+        otsu_threshold, _ = cv2.threshold(
+            cell_pixels, 125, 255,
+            cv2.THRESH_BINARY + cv2.THRESH_OTSU
+        )
+        threshold_value = otsu_threshold
 
     # 应用阈值到整个图像
     global_mask = np.zeros_like(cell_image, dtype=np.uint8)
-    global_mask[cell_image >= otsu_threshold] = 1
-
+    global_mask[cell_image >= threshold_value] = 1
+    # show_gray_image(global_mask * 255)
     return global_mask
 
+
+def adaptive_threshold(cell_pixels):
+    # 重塑图像为一维数组
+    pixels = cell_pixels.reshape((-1, 1)).astype(np.float32)
+
+    # 分析像素分布，判断是否为双峰
+    density = gaussian_kde(pixels.flatten())
+    xs = np.linspace(0, 255, 256)
+    density_values = density(xs)
+
+    # 寻找密度曲线的峰值
+    peaks, _ = find_peaks(density_values)
+
+    # 如果检测到双峰，强制K=2
+    if len(peaks) >= 2:
+        K = 2
+    else:
+        K = 3  # 默认为3类
+
+    # K-means聚类
+    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
+    _, labels, centers = cv2.kmeans(pixels, K, None, criteria, 10, cv2.KMEANS_PP_CENTERS)
+
+    # 找到平均亮度最高的类别索引
+    brightest_cluster_idx = np.argmax(centers)
+
+    # 获取最亮类别的中心值作为阈值
+    threshold_value = centers[brightest_cluster_idx][0]
+
+    return threshold_value
 
 def filter_connected_components(segmented_image, min_size=30):
     """

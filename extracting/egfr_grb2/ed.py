@@ -41,7 +41,17 @@ def min_max_normalize(image, target_min=0, target_max=255):
 
     return normalized_image
 
-def count_single_cell_Ed(image_ed, image_rc, image_dd, image_da, image_aa, background_noise_values, mask, rc_min=0.0, rc_max=3, ed_min=0.0, ed_max=1.0):
+def count_single_cell_Ed(image_ed,
+                         image_rc,
+                         image_dd,
+                         image_da,
+                         image_aa,
+                         background_noise_values,
+                         mask,
+                         rc_min=0.0,
+                         rc_max=3,
+                         ed_min=0.0,
+                         ed_max=1.0):
     """
     输入都是基于numpy处理的图像
     1. 计算单细胞的 Ed 效率值，并统计所有的效率分布情况
@@ -89,9 +99,9 @@ def count_single_cell_Ed(image_ed, image_rc, image_dd, image_da, image_aa, backg
                                                 threshold_abs=top_percent)
 
         # 筛选三通道背景阈值合理的位置点位
-        # 判断对应的聚点是否aa通道满足大于三倍背景值的条件
+        # 判断对应的聚点是否aa通道满足大于2倍背景值的条件
         seeds_mask = filter_mask_by_intensity(seeds_mask, cell_image_aa, background_noise_values['AA'])
-        # 判断对应的聚点是否da通道满足大于三倍背景值的条件
+        # 判断对应的聚点是否da通道满足大于2倍背景值的条件
         seeds_mask = filter_mask_by_intensity(seeds_mask, cell_image_da, background_noise_values['DA'])
 
         # 保存合格的掩码
@@ -136,6 +146,7 @@ def count_single_cell_Ed(image_ed, image_rc, image_dd, image_da, image_aa, backg
         seed_region_ed = cell_image_ed[seeds_mask == 1]
         if seed_region_ed.size > 0:
             result[cell_id]['region_mean'] = seed_region_ed.mean().item()
+            result[cell_id]['region_rc_mean'] = cell_image_rc[seeds_mask == 1].mean().item()
             result[cell_id]['region_variance'] = np.var(seed_region_ed).item()
             result[cell_id]['region_max'] = seed_region_ed.max().item()
             result[cell_id]['region_min'] = seed_region_ed.min().item()
@@ -143,6 +154,7 @@ def count_single_cell_Ed(image_ed, image_rc, image_dd, image_da, image_aa, backg
             result[cell_id]['region_top_25'] = top_25_percent_average(seed_region_ed)
         else:
             result[cell_id]['region_mean'] = np.nan
+            result[cell_id]['region_rc_mean'] = np.nan
             result[cell_id]['region_variance'] = np.nan
             result[cell_id]['region_max'] = np.nan
             result[cell_id]['region_min'] = np.nan
@@ -172,7 +184,6 @@ def top_25_percent_average(arr):
     average = np.mean(top_25_elements)
     return average
 
-
 def top_50_percent_average(arr):
     """
     计算数组由高到低前百分之50的值的平均值
@@ -189,7 +200,6 @@ def top_50_percent_average(arr):
     # 计算这些元素的平均值
     average = np.mean(top_50_elements)
     return average
-
 
 def filter_mask_by_intensity(seeds_mask, image_aa, aa_value, background_factor=2.0):
     """
@@ -219,7 +229,6 @@ def filter_mask_by_intensity(seeds_mask, image_aa, aa_value, background_factor=2
 
     return filtered_mask
 
-
 def region_growth_segmentation(image_dd, threshold=15, threshold_abs=125):
     """
     在图像内进行聚点分割，并使用区域生长算法扩展聚点区域。
@@ -246,7 +255,6 @@ def region_growth_segmentation(image_dd, threshold=15, threshold_abs=125):
     filtered_grown_regions = filter_connected_components(grown_regions)
 
     return filtered_grown_regions
-
 
 def region_growth(image, seeds, threshold=20, max_points=200):
     """
@@ -312,7 +320,6 @@ def region_growth(image, seeds, threshold=20, max_points=200):
 
     return segmented
 
-
 def get_top_intensity_regions(seeds_mask, image_dd, n=5):
     """
     获取掩码中荧光强度均值最高的前N个连通区域，若不足N个则返回原掩码
@@ -347,7 +354,6 @@ def get_top_intensity_regions(seeds_mask, image_dd, n=5):
     top_regions_mask = np.isin(labeled_array, top_indices).astype(np.uint8)
 
     return top_regions_mask
-
 
 def filter_connected_components(segmented_image, min_size=20):
     """

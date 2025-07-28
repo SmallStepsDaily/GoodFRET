@@ -224,7 +224,7 @@ class FRETComputer:
         return result
 
     @staticmethod
-    def subtract_background_noise(image, background_threshold=1.2, current_expose_times=300):
+    def subtract_background_noise(image, background_threshold=1, current_expose_times=300):
         background_flat = image.squeeze().flatten().numpy()
 
         # 统计直方图
@@ -243,7 +243,7 @@ class FRETComputer:
                 break
             low_peak_index += 1
 
-        # 如果没找到合适低峰，使用 most_frequent_index 的 1.2 倍对应的值
+        # 如果没找到合适低峰，使用 most_frequent_index 的 background_threshold 倍对应的值
         if low_peak_index > max_low_peak_index:
             low_peak_index = max_low_peak_index
 
@@ -270,10 +270,10 @@ class FRETComputer:
 if __name__ == "__main__":
     # EGFR 靶点验证
     fret = FRETComputer('egfr_grb2', expose_times=(300, 300, 300), ed_threshold_ratio=0.1)
-    fret.start(r'D:\data\20250611\EGFR\A549-control-4h-d3-c0μm\1')
+    # fret.start(r'D:\data\20250611\EGFR\A549-control-4h-d3-c0μm\1')
     # BAX 靶点验证
     # fret = FRETComputer('bax_bak', expose_times=(300, 300, 300))
     # D:\data\20250412\BCLXL-BAK\MCF7-A133-2h-d1-c60μm\6
     # D:\data\20250412\BCLXL-BAK\MCF7-control-2h-d3-c0μm\4
     # D:\data\20250513\BCLXL-BAK\MCF7-control-2h-d3-c0μm\10
-    # fret.start(r'D:\data\20250513\BCLXL-BAK\MCF7-A133-4h-d1-c80μm\7')
+    fret.start(r'D:\data\hql\2025.07.11\H1975 FRET-phenotype\H1975-Gef-2h-d4-c8.6373μm\3')

@@ -48,7 +48,7 @@ if __name__ == '__main__':
     # main(r'C:\Code\python\csv_data\gl\BCLXL-BAX实验数据\20250513', 0.5, True, 'Fp_region_PCC')
 
     # EGFR 拟合靶点
-    EGFR_model_exprs = {
+    A549_EGFR_model_exprs = {
         'control': '0.4449475861028414 * x / (1.0 + x)',
         'DAC': '0.1122966659895491 * x',
         'ALM': '0.09516652556445405 * x ',
@@ -57,4 +57,26 @@ if __name__ == '__main__':
         'OSI': '0.05591866357178568 * x',
         'VIN': '0.4109161217383655 * x / (1.0 + x)',
     }
-    main(r'C:\Code\python\csv_data\gl\EGFR-GRB2实验数据\A549\20250618', EGFR_model_exprs, 0.5, True, 'Fp_region_PCC')
+
+    H1975_EGFR_model_exprs = {
+        'control': '0.4695 * x / (0.9999 + x)',
+        'DAC': '0.3240 * x / (0.9999 + x)',
+        'ALM': '0.3073 * x / (0.9999 + x)',
+        'GEF': '0.3565 * x / (0.9999 + x)',
+        'AFA': '0.4744 * x / (0.9999 + x)',
+        'OSI': '0.0561 * x',
+        'VIN': '0.0814 * x',
+    }
+
+    BCL2_BAX_exprs = {
+        'control': '0.396 * x / (1.0 + x)',
+        'A133': '0.396 * x / (1.0 + x)',
+        'A199': '0.168 * x / (1.0 + x)'
+    }
+
+    BCLXL_BAX_exprs = {
+        'control': '0.396 * x / (1.0 + x)',
+        'A199': '0.396 * x / (1.0 + x)',
+        'A133': '0.168 * x / (1.0 + x)'
+    }
+    main(r'C:\Code\python\csv_data\gl\EGFR-GRB2实验数据\H1975\20250618', H1975_EGFR_model_exprs, 0.5, True, 'Fp_region_PCC')

@@ -3,6 +3,8 @@ import pandas as pd
 from scipy.stats import pearsonr
 from skimage.filters import threshold_otsu
 
+from tool.image import show_gray_image
+
 
 def count_single_cell_localization(image_dd, image_da, image_aa, mask, regions_mask):
     """
@@ -86,17 +88,13 @@ def calculate_cell_stats(image_dd, image_aa, cell_mask, regions_mask):
     # 计算非线粒体区域
     non_mito_mask = cell_mask * (regions_mask == 0)
 
-    # 提取单细胞区域进行归一化操作的像素值（已归一化）
+    # 提取单细胞区域的像素值
     cell_dd_image = image_dd[cell_mask > 0]
-    cell_dd_image_max_value = cell_dd_image.max()
-    cell_dd_image_min_value = cell_dd_image.min()
 
     cell_aa_image = image_aa[cell_mask > 0]
-    cell_aa_image_max_value = cell_aa_image.max()
-    cell_aa_image_min_value = cell_aa_image.min()
 
-    dd_mito = min_max_normalize(image_dd[mito_mask > 0], cell_dd_image_max_value, cell_dd_image_min_value)
-    aa_mito = min_max_normalize(image_aa[mito_mask > 0], cell_aa_image_max_value, cell_aa_image_min_value)
+    dd_mito = image_dd[mito_mask > 0]
+    aa_mito = image_aa[mito_mask > 0]
 
     if dd_mito is None:
         return {
@@ -114,11 +112,11 @@ def calculate_cell_stats(image_dd, image_aa, cell_mask, regions_mask):
             'Fp_cell_MOC': np.nan,
         }
 
-    dd_non_mito = min_max_normalize(image_dd[non_mito_mask > 0], cell_dd_image_max_value, cell_dd_image_min_value)
-    aa_non_mito = min_max_normalize(image_aa[non_mito_mask > 0], cell_aa_image_max_value, cell_aa_image_min_value)
+    dd_non_mito = image_dd[non_mito_mask > 0]
+    aa_non_mito = image_aa[non_mito_mask > 0]
 
-    dd_whole = min_max_normalize(image_dd[cell_mask > 0], cell_dd_image_max_value, cell_dd_image_min_value)
-    aa_whole = min_max_normalize(image_aa[cell_mask > 0], cell_aa_image_max_value, cell_aa_image_min_value)
+    dd_whole = image_dd[cell_mask > 0]
+    aa_whole = image_aa[cell_mask > 0]
 
     # 计算强度比（避免除以零）
     mito_ratio = calculate_ratio(aa_mito, dd_mito)

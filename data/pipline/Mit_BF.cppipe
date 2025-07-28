@@ -65,7 +65,7 @@ NamesAndTypes:[module_num:3|svn_version:'Unknown'|variable_revision_number:8|sho
     Select the image type:Grayscale image
     Set intensity range from:Image metadata
     Maximum intensity:255.0
-    Select the rule criteria:and (file does contain "mmask.jpg")
+    Select the rule criteria:and (file does contain "mmask")
     Name to assign these images:mmask
     Name to assign these objects:mmask
     Select the image type:Objects

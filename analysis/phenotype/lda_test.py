@@ -176,7 +176,7 @@ class LDAInference:
 
 
 if __name__ == '__main__':
-    csv_path = r"C:\Code\python\csv_data\gl\EGFR-GRB2实验数据\A549\20250618\FB_BF.csv"
+    csv_path = r"C:\Code\python\csv_data\gl\EGFR-GRB2实验数据\H1975\20250618\FB_BF.csv"
     model_dir = 'model'
     ptype = 'BF'
     save_dir = r"C:\Users\pengs\Downloads/表型表征值"

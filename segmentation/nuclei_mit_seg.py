@@ -38,7 +38,6 @@ class MitNucleiSegmentation(Segmentation):
         self.seg_nuclei_diameter = seg_nuclei_diameter
         self.seg_nuclei_min_diameter = seg_nuclei_min_diameter
         self.seg_nuclei_max_diameter = seg_nuclei_max_diameter
-        self.seg_nuclei_model = models.CellposeModel(gpu=True)
 
     def start(self, path):
         try:
@@ -93,9 +92,9 @@ class MitNucleiSegmentation(Segmentation):
         return masks_filtered
 
     def seg_nuclei(self, image_np, factor):
-        masks, flows, styles = self.seg_nuclei_model.eval(image_np,
-                                                                    diameter=self.seg_nuclei_diameter / factor,
-                                                                    flow_threshold=0.4,)
+        masks, flows, styles = self.seg_model.eval(image_np,
+                                                   diameter=self.seg_nuclei_diameter / factor,
+                                                   flow_threshold=0.4,)
         masks_filtered = filter_labeled_masks_by_diameter(masks,
                                                           min_diameter=self.seg_nuclei_min_diameter / factor,
                                                           max_diameter=self.seg_nuclei_max_diameter / factor)
@@ -116,8 +115,8 @@ class MitNucleiSegmentation(Segmentation):
         nuclei_mask_np = self.seg_nuclei(image_np[:, :, 1], self.factor)
 
         mit_mask_np, nuclei_mask_np = self.common_mask(mit_mask_np, nuclei_mask_np)
-        show_gray_image(nuclei_mask_np)
-        show_gray_image(mit_mask_np)
+        # show_gray_image(nuclei_mask_np)
+        # show_gray_image(mit_mask_np)
         # 还原掩码到原始尺寸
         mit_mask_np = cv2.resize(mit_mask_np.astype(np.uint8), (self.original_width, self.original_height),
                                      interpolation=cv2.INTER_NEAREST).astype(np.uint8)
