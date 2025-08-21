@@ -224,7 +224,7 @@ class FRETComputer:
         return result
 
     @staticmethod
-    def subtract_background_noise(image, background_threshold=1, current_expose_times=300):
+    def subtract_background_noise(image, background_threshold=1.2, current_expose_times=300):
         background_flat = image.squeeze().flatten().numpy()
 
         # 统计直方图

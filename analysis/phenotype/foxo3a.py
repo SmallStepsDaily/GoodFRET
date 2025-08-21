@@ -1,9 +1,11 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import os
 
 
-def plot_boxplot_by_treatment(df, treatment_column='Metadata_treatment', ratio_column='intensity_ratio', control_label='control'):
+def plot_boxplot_by_treatment(df, treatment_column='Metadata_treatment', ratio_column='intensity_ratio',
+                              control_label='control', output_dir=None):
     # 确保 control 组在最左边
     treatments = df[treatment_column].unique().tolist()
     if control_label in treatments:
@@ -11,18 +13,29 @@ def plot_boxplot_by_treatment(df, treatment_column='Metadata_treatment', ratio_c
         treatments = [control_label] + treatments
 
     df = df.dropna(axis=0)
-    # 对指定列求倒数，使用 .loc 方法
+    # 对指定列求倒数
     df.loc[:, ratio_column] = 1 / df[ratio_column]
+
+    # 计算各处理组的统计数据（均值、中位数、标准差等）
+    stats_df = df.groupby(treatment_column)[ratio_column].agg(
+        ['count', 'mean', 'median', 'std', 'min', 'max']).reset_index()
+
+    # 保存统计数据为CSV
+    if output_dir:
+        stats_path = os.path.join(output_dir, 'Foxo3a_statistics.csv')
+        stats_df.to_csv(stats_path, index=False)
+        print(f"统计数据已保存至: {stats_path}")
+        print("\n各处理组的统计数据:")
+        print(stats_df.to_string(index=False))  # 打印整齐的表格格式
 
     # 设置图形样式
     sns.set(style="whitegrid")
-
-    # 定义一组配色方案
     palette = sns.color_palette("husl", len(treatments))
 
-    # 绘制箱型图，修改参数以避免警告
+    # 绘制箱型图
     plt.figure(figsize=(10, 6))
-    ax = sns.boxplot(x=treatment_column, y=ratio_column, data=df, order=treatments, showfliers=False, hue=treatment_column, palette=palette, legend=False)
+    ax = sns.boxplot(x=treatment_column, y=ratio_column, data=df, order=treatments, showfliers=False,
+                     hue=treatment_column, palette=palette, legend=False)
 
     # 绘制离群值散点
     for i, treatment in enumerate(treatments):
@@ -41,11 +54,19 @@ def plot_boxplot_by_treatment(df, treatment_column='Metadata_treatment', ratio_c
     plt.xlabel('Treatment')
     plt.ylabel('Foxo3a Nuclear/Non-Nuclear Intensity Ratio')
 
+    # 保存图形
+    if output_dir:
+        plot_path = os.path.join(output_dir, 'Foxo3a_boxplot.png')
+        plt.savefig(plot_path, dpi=300, bbox_inches='tight')
+        print(f"箱线图已保存至: {plot_path}")
+
     # 显示图形
-    plt.show()
+    # plt.show()
 
 
 if __name__ == '__main__':
-    path = r"C:\Code\python\csv_data\qrm\20250630\Foxo3a\foxo3a.csv"
-    df = pd.read_csv(path)
-    plot_boxplot_by_treatment(df)
+    input_path = r"C:\Code\python\csv_data\qrm\20250714\20250709\foxo3a.csv"
+    df = pd.read_csv(input_path)
+    output_directory = os.path.dirname(input_path)
+
+    plot_boxplot_by_treatment(df, output_dir=output_directory)

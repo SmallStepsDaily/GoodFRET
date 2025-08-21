@@ -14,6 +14,35 @@ QtCore.QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
 
 # 检查操作系统类型
 is_macos = platform.system() == 'Darwin'
+is_windows = platform.system() == 'Windows'
+
+
+def get_system_font():
+    """根据不同操作系统获取合适的字体"""
+    if is_macos:
+        return QFont("Helvetica Neue", 15)
+    elif is_windows:
+        return QFont("Segoe UI", 15)
+    else:  # 默认设置，可根据需要调整
+        return QFont("Arial", 15)
+
+
+def get_initial_window_size():
+    """根据不同操作系统和屏幕分辨率获取合适的初始窗口大小"""
+    screen = QGuiApplication.primaryScreen()
+    screen_size = screen.size()
+
+    # 根据屏幕分辨率计算合适的窗口大小比例
+    if is_macos:
+        # macOS 上使用稍小的比例
+        width_ratio = 0.7
+        height_ratio = 0.7
+    else:
+        # Windows 上使用稍大的比例
+        width_ratio = 0.7
+        height_ratio = 0.7
+
+    return int(screen_size.width() * width_ratio), int(screen_size.height() * height_ratio)
 
 
 class ImageProcessingUI(QMainWindow):
@@ -26,11 +55,12 @@ class ImageProcessingUI(QMainWindow):
         # 主窗口设置
         self.setWindowTitle('GoodFRET')
 
-        # 根据不同系统设置不同的初始大小
-        if is_macos:
-            self.resize(1600, 900)  # macOS上使用更合适的初始大小
-        else:
-            self.setGeometry(100, 100, 1920, 1080)
+        # 根据不同系统和屏幕分辨率设置初始大小
+        width, height = get_initial_window_size()
+        self.resize(width, height)
+
+        # 设置窗口为可调整大小
+        self.setMinimumSize(1024, 768)
 
         self.center()
 
@@ -49,19 +79,8 @@ class ImageProcessingUI(QMainWindow):
                    '帮助']
         self.tab_widget = QTabWidget()
 
-        # 在macOS上使用更适合的样式
-        if is_macos:
-            self.tab_widget.setStyleSheet("""
-                QTabBar::tab {
-                    padding: 8px 16px;
-                    font-size: 14px;
-                }
-                QTabWidget::pane {
-                    border: 1px solid #cccccc;
-                    border-radius: 4px;
-                    padding: 10px;
-                }
-            """)
+        # 设置标签页样式
+        self.setup_tab_style()
 
         for i in range(len(actions)):
             tab = QWidget()
@@ -121,10 +140,8 @@ class ImageProcessingUI(QMainWindow):
                 layout.addWidget(help_ui)
                 tab.setLayout(layout)
 
-            # 在macOS上设置标签页的字体
-            if is_macos:
-                font = QFont("Helvetica", 14)
-                tab.setFont(font)
+            # 设置标签页字体
+            tab.setFont(get_system_font())
 
             self.tab_widget.addTab(tab, actions[i])
 
@@ -132,6 +149,55 @@ class ImageProcessingUI(QMainWindow):
         main_layout = QVBoxLayout()
         main_layout.addWidget(self.tab_widget)
         central_widget.setLayout(main_layout)
+
+    def setup_tab_style(self):
+        """设置标签页样式"""
+        if is_macos:
+            # macOS 样式
+            self.tab_widget.setStyleSheet("""
+                QTabBar::tab {
+                    padding: 8px 16px;
+                    font-size: 25px;
+                    margin-right: 2px;
+                    border-radius: 4px 4px 0 0;
+                    background-color: #f0f0f0;
+                }
+                QTabBar::tab:selected {
+                    background-color: #ffffff;
+                    border: 1px solid #cccccc;
+                    border-bottom: none;
+                }
+                QTabWidget::pane {
+                    border: 1px solid #cccccc;
+                    border-radius: 0 4px 4px 4px;
+                    padding: 10px;
+                    background-color: #ffffff;
+                }
+            """)
+        else:
+            # Windows 样式
+            self.tab_widget.setStyleSheet("""
+                QTabBar::tab {
+                    padding: 8px 16px;
+                    font-size: 25px;
+                    margin-right: 1px;
+                    border: 1px solid #a0a0a0;
+                    border-bottom: none;
+                    border-radius: 4px 4px 0 0;
+                    background-color: #e0e0e0;
+                }
+                QTabBar::tab:selected {
+                    background-color: #ffffff;
+                    color: #000000;
+                    font-weight: bold;
+                }
+                QTabWidget::pane {
+                    border: 1px solid #a0a0a0;
+                    border-radius: 0 4px 4px 4px;
+                    padding: 10px;
+                    background-color: #ffffff;
+                }
+            """)
 
     def center(self):
         # 获取屏幕尺寸
@@ -149,19 +215,13 @@ class ImageProcessingUI(QMainWindow):
 def load_window():
     app = QApplication(sys.argv)
 
-    # 在macOS上使用系统默认字体
-    if is_macos:
-        font = QFont()  # 使用系统默认字体
-        font.setPointSize(14)  # 设置适当的字体大小
-    else:
-        font = QFont("Arial", 15)
+    # 启用高 DPI 支持
+    app.setAttribute(Qt.AA_EnableHighDpiScaling, True)
+    app.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
 
+    # 设置应用字体
+    font = get_system_font()
     app.setFont(font)
-
-    # 在macOS上设置高DPI支持
-    if is_macos:
-        app.setAttribute(Qt.AA_EnableHighDpiScaling, True)
-        app.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
 
     window = ImageProcessingUI()
     window.show()

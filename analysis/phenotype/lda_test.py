@@ -5,6 +5,9 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from io import BytesIO
 from PIL import Image
+"""
+调用保存的模型计算对应的表型变化值
+"""
 
 class LDAInference:
     def __init__(self, csv_file, model_dir, ptype):

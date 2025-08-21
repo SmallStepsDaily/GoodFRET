@@ -14,7 +14,9 @@ from sklearn.calibration import CalibratedClassifierCV
 from sklearn.metrics import classification_report, roc_curve, auc
 from sklearn.preprocessing import LabelBinarizer
 from analysis.phenotype.model import Model
-
+"""
+每种药物单独训练一个LDA模型
+"""
 
 class LDAClassifyModel(Model):
     def __init__(self, df, ptype):
@@ -36,7 +38,7 @@ class LDAClassifyModel(Model):
         y = combined_data['Metadata_treatment']
 
         # 保存所需的元数据列
-        metadata_cols = ['ObjectNumber', 'Metadata_site', 'Metadata_concentration', 'Metadata_hour']
+        metadata_cols = ['ObjectNumber', 'Metadata_site', 'Metadata_concentration', 'Metadata_hour', 'Metadata_dish']
         metadata = combined_data[metadata_cols].copy()
 
         # 0. 在分割前平衡数据

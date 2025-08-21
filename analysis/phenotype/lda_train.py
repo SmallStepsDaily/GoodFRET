@@ -1,4 +1,7 @@
 # lda_train.py
+"""
+单独训练LDA模型，进行保存
+"""
 import os
 import pandas as pd
 import joblib
