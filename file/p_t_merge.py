@@ -193,8 +193,8 @@ def main(phenotype_dir, fret_dir, output_dir):
 
 if __name__ == "__main__":
     # 示例用法
-    phenotype_directory = r'C:\Code\python\csv_data\qrm\20250714\20250705\FRET转染细胞表型表征值'  # 表型表征值文件夹路径
-    fret_directory = r'C:\Code\python\csv_data\qrm\20250714\20250705\FRET表征值'  # FRET表征值文件夹路径
-    output_directory = r'C:\Code\python\csv_data\qrm\20250714\20250705\单细胞表征值'  # 输出文件夹路径
+    phenotype_directory = r'C:\Code\python\csv_data\qrm\20250714\20250709\转录表型表征值'  # 表型表征值文件夹路径
+    fret_directory = r'C:\Code\python\csv_data\qrm\20250714\20250709\Foxo3a表征值'  # FRET表征值文件夹路径
+    output_directory = r'C:\Code\python\csv_data\qrm\20250714\20250709\单细胞表征值'  # 输出文件夹路径
 
     main(phenotype_directory, fret_directory, output_directory)

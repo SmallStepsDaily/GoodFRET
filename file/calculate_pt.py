@@ -86,5 +86,5 @@ def main(output_dir):
 
 if __name__ == "__main__":
     # 示例用法
-    output_directory = r'C:\Code\python\csv_data\qrm\20250714\20250705\单细胞表征值'  # 输出文件夹路径
+    output_directory = r'C:\Code\python\csv_data\qrm\20250714\20250708\单细胞表征值'  # 输出文件夹路径
     main(output_directory)
