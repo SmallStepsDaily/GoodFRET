@@ -405,5 +405,5 @@ def run_lda(file_paths, save_path):
 
 
 if __name__ == '__main__':
-    paths = [r"C:\Users\pengs\Downloads\FB_BF.csv"]
-    run_lda(paths, 'C:/Users/pengs/Downloads')
+    paths = [r"C:\Code\python\csv_data\lixin\h3255-20250723-16H\BF+Mit+FRET\E3\BF.csv"]
+    run_lda(paths, 'C:\Code\python\csv_data\lixin\h3255-20250723-16H\BF+Mit+FRET\E3')

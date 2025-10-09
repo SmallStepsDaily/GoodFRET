@@ -32,7 +32,7 @@ class FRETExtractionUI(QWidget):
         middle_layout = QGridLayout()
 
         # 设置中间四列等比例分布
-        for i in range(4):
+        for i in range(5):
             middle_layout.setColumnStretch(i * 2, 1)
             middle_layout.setColumnStretch(i * 2 + 1, 1)
 
@@ -68,6 +68,13 @@ class FRETExtractionUI(QWidget):
         self.ed_valid_input.setText("0.5")
         middle_layout.addWidget(ed_valid_label, 4, 0)
         middle_layout.addWidget(self.ed_valid_input, 4, 1)
+
+        # 有效Ed像素占比
+        bg_threshold = QLabel("背景阈值:")
+        self.bg_threshold_input = QLineEdit()
+        self.bg_threshold_input.setText("1.2")
+        middle_layout.addWidget(bg_threshold, 5, 0)
+        middle_layout.addWidget(self.bg_threshold_input, 5, 1)
 
         # RC/ED 筛选参数部分
         rc_ed_param_label = QLabel("RC/ED 筛选参数")
@@ -240,6 +247,10 @@ class FRETExtractionUI(QWidget):
                 need_Rc_Ed = True
 
             ed_threshold_ratio = float(self.ed_valid_input.text())
+            bg_threshold_value = float(self.bg_threshold_input.text())
+
+            if bg_threshold_value < 0:
+                bg_threshold_value = 1
 
             if ed_threshold_ratio > 1 or ed_threshold_ratio < 0:
                 ed_threshold_ratio = 0.5
@@ -267,6 +278,7 @@ class FRETExtractionUI(QWidget):
                                 need_Fp=need_Fp,
                                 need_Rc_Ed=need_Rc_Ed,
                                 ed_threshold_ratio=ed_threshold_ratio,
+                                background_threshold=bg_threshold_value,
                                 output_redirector=output_redirector,)
             batch = BatchProcessing(input_folder, stop_event=self.stop_event)
             batch.start(process, fret)

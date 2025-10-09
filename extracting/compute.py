@@ -61,6 +61,7 @@ class FRETComputer:
                  need_Fp=True,
                  need_Rc_Ed=True,
                  ed_threshold_ratio=0.5,
+                 background_threshold=1.2,
                  ):
         """
         :param a: 校正因子a
@@ -110,6 +111,9 @@ class FRETComputer:
         # ed有效像素占比阈值
         self.ed_threshold_ratio = ed_threshold_ratio
 
+        # 背景阈值
+        self.background_threshold = background_threshold
+
         # 命令行输出到文本框内
         self.output = output_redirector
 
@@ -143,9 +147,9 @@ class FRETComputer:
         self.mask = mask
 
         # 计算背景噪声 并且FRET三通道减去对应的背景噪声
-        image_AA, image_AA_template, self.background_noise_values['AA'] = self.subtract_background_noise(image_AA, current_expose_times=self.expose_times[0])
-        image_DD, image_DD_template, self.background_noise_values['DD'] = self.subtract_background_noise(image_DD, current_expose_times=self.expose_times[1])
-        image_DA, image_DA_template, self.background_noise_values['DA'] = self.subtract_background_noise(image_DA, current_expose_times=self.expose_times[2])
+        image_AA, image_AA_template, self.background_noise_values['AA'] = self.subtract_background_noise(image_AA, current_expose_times=self.expose_times[0], background_threshold=self.background_threshold)
+        image_DD, image_DD_template, self.background_noise_values['DD'] = self.subtract_background_noise(image_DD, current_expose_times=self.expose_times[1], background_threshold=self.background_threshold)
+        image_DA, image_DA_template, self.background_noise_values['DA'] = self.subtract_background_noise(image_DA, current_expose_times=self.expose_times[2], background_threshold=self.background_threshold)
 
         # 添加三通道有效模板 三通道值全部必须为正
         effective_template = image_AA_template * image_DD_template * image_DA_template
@@ -224,7 +228,7 @@ class FRETComputer:
         return result
 
     @staticmethod
-    def subtract_background_noise(image, background_threshold=1.2, current_expose_times=300):
+    def subtract_background_noise(image, background_threshold=1.0, current_expose_times=300):
         background_flat = image.squeeze().flatten().numpy()
 
         # 统计直方图
@@ -269,11 +273,11 @@ class FRETComputer:
 
 if __name__ == "__main__":
     # EGFR 靶点验证
-    fret = FRETComputer('egfr_grb2', expose_times=(300, 300, 300), ed_threshold_ratio=0.1)
+    fret = FRETComputer('egfr_grb2', expose_times=(1000, 300, 500), ed_threshold_ratio=0.1)
     # fret.start(r'D:\data\20250611\EGFR\A549-control-4h-d3-c0μm\1')
     # BAX 靶点验证
     # fret = FRETComputer('bax_bak', expose_times=(300, 300, 300))
     # D:\data\20250412\BCLXL-BAK\MCF7-A133-2h-d1-c60μm\6
     # D:\data\20250412\BCLXL-BAK\MCF7-control-2h-d3-c0μm\4
     # D:\data\20250513\BCLXL-BAK\MCF7-control-2h-d3-c0μm\10
-    fret.start(r'D:\data\hql\2025.07.11\H1975 FRET-phenotype\H1975-Gef-2h-d4-c8.6373μm\3')
+    fret.start(r'C:\Users\pengs\Downloads')

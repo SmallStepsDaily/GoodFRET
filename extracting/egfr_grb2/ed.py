@@ -104,8 +104,6 @@ def count_single_cell_Ed(image_ed,
         # 判断对应的聚点是否da通道满足大于2倍背景值的条件
         seeds_mask = filter_mask_by_intensity(seeds_mask, cell_image_da, background_noise_values['DA'])
 
-        # 保存合格的掩码
-        agg_mask[minr:maxr, minc:maxc] = seeds_mask | agg_mask[minr:maxr, minc:maxc]
 
         # 筛选在符合Rc范围内的值
         # 创建RC图像的掩码（值在0到3之间的区域为True）
@@ -124,6 +122,9 @@ def count_single_cell_Ed(image_ed,
 
         # 获取前50的聚点进行分析
         seeds_mask = get_top_intensity_regions(seeds_mask, cell_image_normalize_dd, 50)
+
+        # 保存合格的掩码
+        agg_mask[minr:maxr, minc:maxc] = seeds_mask | agg_mask[minr:maxr, minc:maxc]
 
         # 单细胞特征提取点 分别非0和存0两种图像进行采集
         cell_region_ed = cell_image_ed[cell_mask]
@@ -256,7 +257,7 @@ def region_growth_segmentation(image_dd, threshold=15, threshold_abs=125):
 
     return filtered_grown_regions
 
-def region_growth(image, seeds, threshold=20, max_points=200):
+def region_growth(image, seeds, threshold=20, max_points=400):
     """
     执行区域生长算法，并按每个种子点独立限制最大生长点数。
 
@@ -320,7 +321,7 @@ def region_growth(image, seeds, threshold=20, max_points=200):
 
     return segmented
 
-def get_top_intensity_regions(seeds_mask, image_dd, n=5):
+def get_top_intensity_regions(seeds_mask, image_dd, n=30):
     """
     获取掩码中荧光强度均值最高的前N个连通区域，若不足N个则返回原掩码
 
@@ -355,7 +356,7 @@ def get_top_intensity_regions(seeds_mask, image_dd, n=5):
 
     return top_regions_mask
 
-def filter_connected_components(segmented_image, min_size=20):
+def filter_connected_components(segmented_image, min_size=50):
     """
     筛选连通组件，移除面积小于min_size的区域。
 

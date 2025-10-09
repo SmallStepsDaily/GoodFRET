@@ -164,4 +164,4 @@ class FRETSegmentation(Segmentation):
 
 if __name__ == '__main__':
     nuclei = FRETSegmentation()
-    nuclei.start(r'D:\data\20250529晚\MCF7-control-2h-d3-c0μm\2')
+    nuclei.start(r'C:\Users\pengs\Downloads')

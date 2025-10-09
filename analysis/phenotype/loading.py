@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 
 
@@ -10,10 +11,11 @@ class FileLoader:
         self._load_files()
 
     def _load_files(self):
-        bf_files = [path for path in self.file_paths if 'BF' in path and path.endswith('.csv')]
-        nuclei_files = [path for path in self.file_paths if 'Nuclei' in path and path.endswith('.csv')]
-        mit_files = [path for path in self.file_paths if 'Mit' in path and path.endswith('.csv')]
-
+        # 使用文件名而非完整路径进行判断
+        bf_files = [path for path in self.file_paths if 'BF' in os.path.basename(path) and path.endswith('.csv')]
+        nuclei_files = [path for path in self.file_paths if
+                        'Nuclei' in os.path.basename(path) and path.endswith('.csv')]
+        mit_files = [path for path in self.file_paths if 'Mit' in os.path.basename(path) and path.endswith('.csv')]
         if len(bf_files) > 1:
             raise ValueError("应该只有一个唯一包含 'BF' 的 CSV 文件")
         elif len(bf_files) == 1:

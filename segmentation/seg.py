@@ -80,7 +80,7 @@ class Segmentation:
             # 获取线粒体区域内的细胞核标签
             nuclei_in_mit = nuclei_mask_np[mit_region]
             nuclei_labels = np.unique(nuclei_in_mit[nuclei_in_mit > 0])
-
+            # print(nuclei_labels)
             if len(nuclei_labels) == 0:
                 continue  # 无线粒体-细胞核重叠，跳过
 

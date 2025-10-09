@@ -48,8 +48,8 @@ class MitNucleiSegmentation(Segmentation):
             self.original_height, self.original_width = mit_image_np.shape
             self.factor = self.original_height / 512
             # 将两个通道进行组合操作
-            mit_image_np = self.pretreatment(mit_image_np)
-            nuclei_image_np = self.pretreatment(nuclei_image_np, need_CLAHE=True)
+            mit_image_np = self.pretreatment(mit_image_np, need_CLAHE=True)
+            nuclei_image_np = self.pretreatment(nuclei_image_np, need_CLAHE=False)
             current_image_np = np.stack([mit_image_np, nuclei_image_np], axis=-1)
             print(f"分割线粒体和细胞核组合的细胞操作 ===================>  {str(path)}")
             self.output.append(f"分割线粒体和细胞核组合的细胞操作 ===================>  {str(path)}")
@@ -64,7 +64,12 @@ class MitNucleiSegmentation(Segmentation):
 
 
     def pretreatment(self, image_np, need_CLAHE=False):
-        if image_np.mean() * 20 < image_np.max():
+        # 计算前 5% 的阈值（即 95% 分位数）
+        flat = image_np.flatten()
+        threshold = np.percentile(flat, 95)
+        # 选取大于等于该阈值的所有像素（注意：可能略多于 5%，因为有重复值）
+        top_pixels = flat[flat >= threshold]
+        if image_np.mean() * 20 < top_pixels.mean():
             print("该图像的存在较高的亮度，需要进行log对换降低最高亮度值！！！")
             result_image = self.log_image(image_np)
         else:
@@ -137,4 +142,4 @@ if __name__ == '__main__':
         print("CUDA is NOT available. GPU is OFF.")
 
     cell = MitNucleiSegmentation()
-    cell.start(r'D:\data\20250514\EGFR\A549-AFA-2h-d1-c25μm\4')
+    cell.start(r'E:\data\qrm\2025.07.14\2025.07.01 A549 E-G 4H\A549-OSI-4h-d4-c11.75μm\19')
