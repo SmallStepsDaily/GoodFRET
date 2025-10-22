@@ -1,11 +1,11 @@
-"""
-用于表型csv文件与FRET csv文件 根据元数据拼接
-"""
 import os
 import re
 import pandas as pd
 from collections import defaultdict
-
+"""
+文件合并：
+1. 合并表型P评分和靶标T评分
+"""
 
 def parse_filename(filename):
     """解析文件名，提取特征类型和组别"""
@@ -193,8 +193,8 @@ def main(phenotype_dir, fret_dir, output_dir):
 
 if __name__ == "__main__":
     # 示例用法
-    phenotype_directory = r'C:\Code\python\csv_data\qrm\20250714\20250709\转录表型表征值'  # 表型表征值文件夹路径
-    fret_directory = r'C:\Code\python\csv_data\qrm\20250714\20250709\Foxo3a表征值'  # FRET表征值文件夹路径
-    output_directory = r'C:\Code\python\csv_data\qrm\20250714\20250709\单细胞表征值'  # 输出文件夹路径
+    phenotype_directory = r'C:\Code\python\csv_data\qrm\20250820\转录单细胞表征值'  # 表型表征值文件夹路径
+    fret_directory = r'C:\Code\python\csv_data\qrm\20250820\FRET表征值-转录细胞'  # FRET表征值文件夹路径
+    output_directory = r'C:\Code\python\csv_data\qrm\20250820\单细胞药效'  # 输出文件夹路径
 
     main(phenotype_directory, fret_directory, output_directory)

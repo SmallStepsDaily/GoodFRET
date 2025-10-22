@@ -1,13 +1,12 @@
-"""
-通过设定的函数计算对应的PT值
-"""
-
-
 import os
-
 import numpy as np
 import pandas as pd
-
+"""
+PT值计算：
+1. 读取拼接文件夹内的数据
+2. 采用指数函数进行药效值计算——单细胞尺度计算
+3. 单浓度和时间函数
+"""
 def calculate_A(S, E):
     """
     根据S值和E值计算A值
@@ -15,7 +14,7 @@ def calculate_A(S, E):
     """
     # 示例公式：A = S * (1 - E/100)
     E = np.abs(E)
-    return 100 * ((0.5 * E + 1) ** (0.5 * S) - 1)
+    return 100 * ((E + 1) ** S - 1)
 
 
 def calculate_B(concentration, hour):
@@ -86,5 +85,5 @@ def main(output_dir):
 
 if __name__ == "__main__":
     # 示例用法
-    output_directory = r'C:\Code\python\csv_data\qrm\20250714\20250708\单细胞表征值'  # 输出文件夹路径
+    output_directory = r'C:\Code\python\csv_data\qrm\20250820\单细胞药效'  # 输出文件夹路径
     main(output_directory)

@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 import tifffile as tiff
 
-from extracting.phenotype.foxo3a_nuclei import calculate_fluorescence_ratio
+from extracting.foxo3a.foxo3a_nuclei import calculate_fluorescence_ratio
 from segmentation.seg import Segmentation, filter_labeled_masks_by_diameter
 from cellpose import models
 

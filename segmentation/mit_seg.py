@@ -91,4 +91,4 @@ if __name__ == '__main__':
         print("CUDA is NOT available. GPU is OFF.")
 
     cell = MitSegmentation()
-    cell.start(r'D:\data\hql\2025.07.11\H1975 FRET-phenotype\H1975-Dac-2h-d3-c2.3833μm\6')
+    cell.start(r'D:\data\hql\2025.07.11\H1975 FRET-foxo3a\H1975-Dac-2h-d3-c2.3833μm\6')

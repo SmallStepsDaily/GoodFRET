@@ -2,7 +2,11 @@ import pandas as pd
 import os
 import matplotlib.pyplot as plt
 import seaborn as sns
-
+"""
+T评分计算代码：
+1. 基于标准化公式计算
+2. 绘制统计图
+"""
 # 设置 Nature 风格
 plt.rcParams.update({
     'font.family': 'Arial',
