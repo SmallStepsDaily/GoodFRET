@@ -61,7 +61,7 @@ class FRETComputer:
                  need_Fp=True,
                  need_Rc_Ed=True,
                  ed_threshold_ratio=0.5,
-                 background_threshold=1.2,
+                 background_threshold=None,
                  ):
         """
         :param a: 校正因子a
@@ -72,6 +72,8 @@ class FRETComputer:
         :param k: 校正因子k
         :param expose_times: 三通道曝光时间
         """
+        if background_threshold is None:
+            background_threshold = [1.2, 1.2, 1.2]
         self.a = a
         self.b = b
         self.c = c
@@ -147,9 +149,9 @@ class FRETComputer:
         self.mask = mask
 
         # 计算背景噪声 并且FRET三通道减去对应的背景噪声
-        image_AA, image_AA_template, self.background_noise_values['AA'] = self.subtract_background_noise(image_AA, current_expose_times=self.expose_times[0], background_threshold=self.background_threshold)
-        image_DD, image_DD_template, self.background_noise_values['DD'] = self.subtract_background_noise(image_DD, current_expose_times=self.expose_times[1], background_threshold=self.background_threshold)
-        image_DA, image_DA_template, self.background_noise_values['DA'] = self.subtract_background_noise(image_DA, current_expose_times=self.expose_times[2], background_threshold=self.background_threshold)
+        image_AA, image_AA_template, self.background_noise_values['AA'] = self.subtract_background_noise(image_AA, current_expose_times=self.expose_times[0], background_threshold=self.background_threshold[0])
+        image_DD, image_DD_template, self.background_noise_values['DD'] = self.subtract_background_noise(image_DD, current_expose_times=self.expose_times[1], background_threshold=self.background_threshold[1])
+        image_DA, image_DA_template, self.background_noise_values['DA'] = self.subtract_background_noise(image_DA, current_expose_times=self.expose_times[2], background_threshold=self.background_threshold[2])
 
         # 添加三通道有效模板 三通道值全部必须为正
         effective_template = image_AA_template * image_DD_template * image_DA_template

@@ -257,7 +257,7 @@ def region_growth_segmentation(image_dd, threshold=15, threshold_abs=125):
 
     return filtered_grown_regions
 
-def region_growth(image, seeds, threshold=20, max_points=400):
+def region_growth(image, seeds, threshold=20, max_points=100):
     """
     执行区域生长算法，并按每个种子点独立限制最大生长点数。
 
@@ -321,7 +321,7 @@ def region_growth(image, seeds, threshold=20, max_points=400):
 
     return segmented
 
-def get_top_intensity_regions(seeds_mask, image_dd, n=30):
+def get_top_intensity_regions(seeds_mask, image_dd, n=20):
     """
     获取掩码中荧光强度均值最高的前N个连通区域，若不足N个则返回原掩码
 

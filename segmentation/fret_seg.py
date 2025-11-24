@@ -25,8 +25,8 @@ class FRETSegmentation(Segmentation):
                  seg_diameter=200,
                  seg_min_diameter=80,
                  seg_max_diameter=500,
-                 DD_scaler=1,
-                 AA_scaler=1,
+                 DD_scaler=1.2,
+                 AA_scaler=2,
                  weight=0.5):
         super().__init__(output_redirector)
 
@@ -45,7 +45,6 @@ class FRETSegmentation(Segmentation):
         self.weight = weight
 
     def start(self, path):
-        # 读取细胞核图像
         dd_image_np = normalize_image(imread(os.path.join(path, 'DD.tif')))
         aa_image_np = normalize_image(imread(os.path.join(path, 'AA.tif')))
         # 合并图像
@@ -163,5 +162,5 @@ class FRETSegmentation(Segmentation):
 
 
 if __name__ == '__main__':
-    nuclei = FRETSegmentation()
-    nuclei.start(r'C:\Users\pengs\Downloads')
+    fret = FRETSegmentation()
+    fret.start(r'E:\data\qrm\2025.07.14\2025.07.01 A549 E-G 4H\A549-OSI-4h-d4-c11.75μm\4')

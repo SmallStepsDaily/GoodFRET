@@ -70,11 +70,23 @@ class FRETExtractionUI(QWidget):
         middle_layout.addWidget(self.ed_valid_input, 4, 1)
 
         # 有效Ed像素占比
-        bg_threshold = QLabel("背景阈值:")
-        self.bg_threshold_input = QLineEdit()
-        self.bg_threshold_input.setText("1.2")
-        middle_layout.addWidget(bg_threshold, 5, 0)
-        middle_layout.addWidget(self.bg_threshold_input, 5, 1)
+        aa_bg_threshold = QLabel("AA背景阈值:")
+        self.aa_bg_threshold_input = QLineEdit()
+        self.aa_bg_threshold_input.setText("1.2")
+        middle_layout.addWidget(aa_bg_threshold, 5, 0)
+        middle_layout.addWidget(self.aa_bg_threshold_input, 5, 1)
+
+        dd_bg_threshold = QLabel("DD背景阈值:")
+        self.dd_bg_threshold_input = QLineEdit()
+        self.dd_bg_threshold_input.setText("1.2")
+        middle_layout.addWidget(dd_bg_threshold, 5, 2)
+        middle_layout.addWidget(self.dd_bg_threshold_input, 5, 3)
+
+        da_bg_threshold = QLabel("DA背景阈值:")
+        self.da_bg_threshold_input = QLineEdit()
+        self.da_bg_threshold_input.setText("1.2")
+        middle_layout.addWidget(da_bg_threshold, 5, 4)
+        middle_layout.addWidget(self.da_bg_threshold_input, 5, 5)
 
         # RC/ED 筛选参数部分
         rc_ed_param_label = QLabel("RC/ED 筛选参数")
@@ -247,10 +259,9 @@ class FRETExtractionUI(QWidget):
                 need_Rc_Ed = True
 
             ed_threshold_ratio = float(self.ed_valid_input.text())
-            bg_threshold_value = float(self.bg_threshold_input.text())
-
-            if bg_threshold_value < 0:
-                bg_threshold_value = 1
+            bg_threshold_value = [float(self.aa_bg_threshold_input.text()),
+                                  float(self.dd_bg_threshold_input.text()),
+                                  float(self.da_bg_threshold_input.text())]
 
             if ed_threshold_ratio > 1 or ed_threshold_ratio < 0:
                 ed_threshold_ratio = 0.5
