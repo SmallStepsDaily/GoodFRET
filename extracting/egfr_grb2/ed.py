@@ -321,7 +321,7 @@ def region_growth(image, seeds, threshold=20, max_points=100):
 
     return segmented
 
-def get_top_intensity_regions(seeds_mask, image_dd, n=20):
+def get_top_intensity_regions(seeds_mask, image_dd, n=5):
     """
     获取掩码中荧光强度均值最高的前N个连通区域，若不足N个则返回原掩码
 
@@ -361,7 +361,7 @@ def filter_connected_components(segmented_image, min_size=50):
     筛选连通组件，移除面积小于min_size的区域。
 
     :param segmented_image: 区域生长后的二值图像
-    :param min_size: 最小连通区域面积，默认20
+    :param min_size: 最小连通区域面积，默认50
     :return: 过滤后的二值图像
     """
     # 使用 OpenCV 找到所有连通组件及其统计信息
