@@ -33,7 +33,7 @@ class SD(FRETCharacterizationValue):
         self.time = 0
         self.all_sd_values = {}  # 存储所有SD值结果
 
-    def start(self, control_name: str = 'control', feature_name: str = ''):
+    def start(self, control_name: str = 'CTRL', feature_name: str = ''):
         """
         执行SD分析流程，计算各处理组与对照组在不同时间点的SD值
         """
@@ -281,9 +281,9 @@ class SD(FRETCharacterizationValue):
 
 
 if __name__ == '__main__':
-    data_df = pd.read_csv(r"D:\data\20250515\FRET.csv")
+    data_df = pd.read_csv(r"C:\Code\python\csv_data\qrm\20250509\FRET.csv")
     sd_model = SD(data_df)
     # Cell_Ed_region_top_50_value
-    values, result_str, image = sd_model.start(feature_name='Cell_Ed_region_top_50_value')
+    values, result_str, image = sd_model.start(feature_name='Ed_region_mean')
     save_base64_with_prefix(image, r"C:\Users\pengs\Downloads\test.png")
     print(result_str)

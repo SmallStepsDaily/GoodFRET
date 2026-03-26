@@ -121,7 +121,7 @@ def count_single_cell_Ed(image_ed,
         seeds_mask = filter_connected_components(seeds_mask)
 
         # 获取前50的聚点进行分析
-        seeds_mask = get_top_intensity_regions(seeds_mask, cell_image_normalize_dd, 50)
+        seeds_mask = get_top_intensity_regions(seeds_mask, cell_image_normalize_dd, 100)
 
         # 保存合格的掩码
         agg_mask[minr:maxr, minc:maxc] = seeds_mask | agg_mask[minr:maxr, minc:maxc]
@@ -321,7 +321,7 @@ def region_growth(image, seeds, threshold=20, max_points=100):
 
     return segmented
 
-def get_top_intensity_regions(seeds_mask, image_dd, n=5):
+def get_top_intensity_regions(seeds_mask, image_dd, n=100):
     """
     获取掩码中荧光强度均值最高的前N个连通区域，若不足N个则返回原掩码
 

@@ -151,7 +151,7 @@ class LDAClassifyModel(Model):
         """
         计算表型表征值
         """
-        control_predict_mean = df.loc[df['Metadata_treatment'] == 'control', 'Predicted_Probability'].mean()
+        control_predict_mean = df.loc[df['Metadata_treatment'] == 'CTRL', 'Predicted_Probability'].mean()
         # 仅计算测试集的预测概率
         drug_predict_list = df.loc[(df['Metadata_treatment'] == drug_name) & (df['Is_Test'] == True), 'Predicted_Probability']
         # 在这里如果加药组数量比较少的情况下，需要添加训练组数据进去
@@ -233,7 +233,7 @@ class LDAClassifyModel(Model):
         unique_hours = self.df['Metadata_hour'].unique()
         # 去除 'control' 处理
         unique_treatments = [treatment for treatment in self.df['Metadata_treatment'].unique() if
-                             treatment != 'control']
+                             treatment != 'CTRL']
         result_str = ""
         result_df = {}
         image_df = pd.DataFrame()
@@ -252,11 +252,11 @@ class LDAClassifyModel(Model):
                     continue
 
                 # 筛选出 Metadata_hour 相同且 Metadata_treatment 为 control 的数据
-                control_data = self.df[(self.df['Metadata_hour'] == hour) & (self.df['Metadata_treatment'] == 'control')]
+                control_data = self.df[(self.df['Metadata_hour'] == hour) & (self.df['Metadata_treatment'] == 'CTRL')]
 
                 # 假设当前时间点对照组为空，则选择任意时间节点的control数据
                 if control_data.empty:
-                    control_data = self.df[self.df['Metadata_treatment'] == 'control']
+                    control_data = self.df[self.df['Metadata_treatment'] == 'CTRL']
                 # 遍历浓度进行计算
                 concentrations = pd.unique(subset_data['Metadata_concentration'])
                 for concentration in concentrations:
@@ -296,8 +296,8 @@ def statistic_treatment_time_concentration(df, feature_type):
 
     # 确保control组排在前面
     tc_order = ['control_' + str(c) + 'μM' for c in
-                sorted(df[df['Metadata_treatment'] == 'control']['Metadata_concentration'].unique())]
-    other_tc = [f'{t}_{c}μM' for t in sorted(df[df['Metadata_treatment'] != 'control']['Metadata_treatment'].unique())
+                sorted(df[df['Metadata_treatment'] == 'CTRL']['Metadata_concentration'].unique())]
+    other_tc = [f'{t}_{c}μM' for t in sorted(df[df['Metadata_treatment'] != 'CTRL']['Metadata_treatment'].unique())
                 for c in sorted(df[df['Metadata_treatment'] == t]['Metadata_concentration'].unique())]
     tc_order.extend(other_tc)
 
